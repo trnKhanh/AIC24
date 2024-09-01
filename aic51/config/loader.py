@@ -5,22 +5,28 @@ from pathlib import Path
 from yaml import safe_load
 
 
-def static_init(cls):
-    if hasattr(cls, "__static_init__"):
-        cls.__static_init__()
-    return cls
-
-
-@static_init
 class GlobalConfig:
     CONFIG_FILE = "config.yaml"
 
     @classmethod
-    def __static_init__(cls):
+    def __load_config(cls):
+        if hasattr(cls, "__config"):
+            return
+        setattr(cls, "__config", None)
+
+        logger = logging.getLogger(
+            f'{".".join(__name__.split(".")[:-1])}.{cls.__name__}'
+        )
+
         work_dir = Path.cwd()
         config_path = work_dir / cls.CONFIG_FILE
+
         if not config_path.exists():
+            logger.warning(
+                f'"{cls.CONFIG_FILE}" not found. Are you in AIC51 directory?'
+            )
             cls.__config = None
+
             return
 
         with open(work_dir / cls.CONFIG_FILE, "r") as f:
@@ -28,13 +34,8 @@ class GlobalConfig:
 
     @classmethod
     def get(cls, *args):
-        logger = logging.getLogger(
-            f'{".".join(__name__.split(".")[:-1])}.{cls.__name__}'
-        )
+        cls.__load_config()
         if cls.__config is None:
-            logger.warning(
-                f"{cls.CONFIG_FILE} not found. Are you in AIC51 directory?"
-            )
             return None
 
         try:
