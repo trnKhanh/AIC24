@@ -120,7 +120,6 @@ class AddCommand(BaseCommand):
                     if video_id:
                         self._extract_keyframes(
                             output_path,
-                            do_overwrite,
                             show_progress(task_id),
                         )
                         progress.advance(task_id)
@@ -162,11 +161,11 @@ class AddCommand(BaseCommand):
 
         return output_path, video_id
 
-    def _extract_keyframes(self, video_path, do_overwrite, update_progress):
+    def _extract_keyframes(self, video_path, update_progress):
         update_progress(description=f"Extracting keyframes...")
 
         keyframe_dir = self._work_dir / "keyframes" / f"{video_path.stem}"
-        if do_overwrite and keyframe_dir.exists():
+        if keyframe_dir.exists():
             shutil.rmtree(keyframe_dir)
 
         keyframe_dir.mkdir(parents=True, exist_ok=True)
