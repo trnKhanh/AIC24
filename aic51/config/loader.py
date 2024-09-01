@@ -27,7 +27,7 @@ class GlobalConfig:
             cls.__config = safe_load(f)
 
     @classmethod
-    def get(cls, attr):
+    def get(cls, *args):
         logger = logging.getLogger(
             f'{".".join(__name__.split(".")[:-1])}.{cls.__name__}'
         )
@@ -38,6 +38,9 @@ class GlobalConfig:
             return None
 
         try:
-            return cls.__config[attr]
+            res = cls.__config
+            for arg in args:
+                res = res[arg]
+            return res
         except KeyError:
             return None
