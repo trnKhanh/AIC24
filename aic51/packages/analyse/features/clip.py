@@ -65,8 +65,12 @@ class CLIP(object):
 
         return image_features
 
-    def get_text_features(self, texts, batch_size):
-        pass
+    def get_text_features(self, texts):
+        tokenized_input = self._processor(texts=texts, return_tensors="pt")
+
+        text_features = self._model.get_text_features(**tokenized_input)
+
+        return text_features
 
     def to(self, device):
         self._model.to(device)

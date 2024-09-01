@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,data,images,video,audio,node
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,jupyternotebooks,data,images,video,audio,node
 
+# Milvus-standalone
+volumes
+
 ### Audio ###
 *.aif
 *.iff

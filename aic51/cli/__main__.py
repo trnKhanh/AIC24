@@ -1,5 +1,4 @@
 import os
-import sys
 import logging
 from argparse import ArgumentParser
 from pathlib import Path
@@ -13,7 +12,7 @@ from rich.traceback import install
 
 from . import commands
 
-                
+
 
 def main():
     dev_mode = os.getenv("AIC51_DEV", "false").lower() == "true"
