@@ -10,24 +10,24 @@ load_dotenv()
 from rich.logging import RichHandler
 from rich.traceback import install
 
+dev_mode = os.getenv("AIC51_DEV", "false").lower() == "true"
+# Setup loggers
+FORMAT = "%(message)s"
+DATE_FORMAT = "[%X]"
+logging.basicConfig(
+    level=logging.DEBUG if dev_mode else logging.INFO,
+    format=FORMAT,
+    datefmt=DATE_FORMAT,
+    handlers=[RichHandler(rich_tracebacks=True)],
+)
+logger = logging.getLogger(__name__)
+
+install(show_locals=dev_mode)
+
 from . import commands
 
 
-
 def main():
-    dev_mode = os.getenv("AIC51_DEV", "false").lower() == "true"
-    # Setup loggers
-    FORMAT = "%(message)s"
-    DATE_FORMAT = "[%X]"
-    logging.basicConfig(
-        level=logging.DEBUG if dev_mode else logging.INFO,
-        format=FORMAT,
-        datefmt=DATE_FORMAT,
-        handlers=[RichHandler(rich_tracebacks=True)],
-    )
-    logger = logging.getLogger(__name__)
-
-    install(show_locals=dev_mode)
 
     work_dir = Path.cwd()
 

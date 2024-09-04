@@ -44,9 +44,9 @@ class CLIP(object):
             batch_size=batch_size,
             shuffle=False,
             drop_last=False,
-            num_workers=GlobalConfig.get("features", "num_workers") or 0,
+            num_workers=GlobalConfig.get("analyse", "num_workers") or 0,
             pin_memory=(
-                True if GlobalConfig.get("features", "pin_memory") else False
+                True if GlobalConfig.get("analyse", "pin_memory") else False
             ),
         )
         image_features = None
@@ -66,7 +66,7 @@ class CLIP(object):
         return image_features
 
     def get_text_features(self, texts):
-        tokenized_input = self._processor(texts=texts, return_tensors="pt")
+        tokenized_input = self._processor(text=texts, return_tensors="pt")
 
         text_features = self._model.get_text_features(**tokenized_input)
 

@@ -1,13 +1,11 @@
-features:
-  num_workers: 1
-  pin_memory: true
-
 analyse:
-  features:
+  features: &analyse_features
     - name: "clip_b_32"
       pretrained_model: "openai/clip-vit-base-patch32"
     - name: "clip_b_16"
       pretrained_model: "openai/clip-vit-base-patch16"
+  num_workers: 1
+  pin_memory: true
 
 milvus:
   fields:
@@ -37,4 +35,6 @@ milvus:
       params:
         nlist: 128
 
-
+webui:
+  features: *analyse_features
+  database: "milvus"
