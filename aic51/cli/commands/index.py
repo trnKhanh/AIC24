@@ -35,11 +35,10 @@ class IndexCommand(BaseCommand):
         parser.set_defaults(func=self)
 
     def __call__(self, collection_name, do_update, *args, **kwargs):
-        # For some reasons, drop_collection works but very slow and 
+        # For some reasons, drop_collection works but very slow and
         # blocks IO process. Therefore, do not specify the overwrite
         # flag at the moment.
         database = MilvusDatabase(collection_name)
-
         features_dir = self._work_dir / "features"
         with (
             Progress(
@@ -62,7 +61,10 @@ class IndexCommand(BaseCommand):
                 )
                 try:
                     self._index_features(
-                        database, video_id, do_update, update_progress(task_id)
+                        database,
+                        video_id,
+                        do_update,
+                        update_progress(task_id),
                     )
                     progress.update(
                         task_id,
@@ -73,22 +75,25 @@ class IndexCommand(BaseCommand):
                 except Exception as e:
                     progress.update(task_id, description=f"Error: {str(e)}")
 
-            for video in os.scandir(features_dir):
-                if not video.is_dir():
-                    continue
-                video_id = video.name
+            for video_path in features_dir.glob("*/"):
+                video_id = video_path.stem
                 executor.submit(index_one_video, video_id)
 
-    def _index_features(self, database, video_id, do_update, update_progress):
+    def _index_features(
+        self, database, video_id, do_update, update_progress
+    ):
         update_progress(description="Indexing...")
         features_dir = self._work_dir / "features" / video_id
-        for feature_file in os.scandir(features_dir):
-            feature_path = Path(feature_file.path)
-            feature = np.load(feature_path)
-            frame_id = int(feature_path.stem)
+        for frame_path in features_dir.glob("*/"):
+            frame_id = int(frame_path.stem)
             data = {
                 "frame_id": f"{video_id}#{frame_id}",  # This is because Milvus does not allow composite primary key
-                "clip_feature": feature,
                 "cluster_id": 0,
             }
+            for feature_path in frame_path.glob("*.npy"):
+                feature = np.load(feature_path)
+                data = {
+                    **data,
+                    f"feature_{feature_path.stem}": feature,
+                }
             database.insert(data, do_update)

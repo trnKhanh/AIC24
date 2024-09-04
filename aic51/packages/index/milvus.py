@@ -24,7 +24,7 @@ class MilvusDatabase(object):
         "ARRAY": DataType.ARRAY,
     }
 
-    def __init__(self, collection_name, do_overwrite = False):
+    def __init__(self, collection_name, do_overwrite=False):
         self._collection_name = collection_name
         self._logger = logging.getLogger(__name__)
         self._start_server()
@@ -67,13 +67,14 @@ class MilvusDatabase(object):
         else:
             self._client.insert(self._collection_name, data)
 
-    def search(self, query, filter, offset, limit, nprob=8):
+    def search(self, query, filter, offset, limit, nprob=8, feature="clip"):
         search_params = {
             "nprob": nprob,
         }
         res = self._client.search(
             self._collection_name,
             query,
+            anns_field=f"{feature}_feature",
             filter=filter,
             offset=offset,
             limit=limit,
