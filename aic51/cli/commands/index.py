@@ -25,6 +25,13 @@ class IndexCommand(BaseCommand):
             help="Name of collection to index",
         )
         parser.add_argument(
+            "-o",
+            "--overwrite",
+            dest="do_overwrite",
+            action="store_true",
+            help="Overwrite existing collection"
+        )
+        parser.add_argument(
             "-u",
             "--update",
             dest="do_update",
@@ -34,11 +41,12 @@ class IndexCommand(BaseCommand):
 
         parser.set_defaults(func=self)
 
-    def __call__(self, collection_name, do_update, *args, **kwargs):
+    def __call__(self, collection_name, do_overwrite, do_update, *args, **kwargs):
+        MilvusDatabase.start_server()
         # For some reasons, drop_collection works but very slow and
         # blocks IO process. Therefore, do not specify the overwrite
         # flag at the moment.
-        database = MilvusDatabase(collection_name)
+        database = MilvusDatabase(collection_name, do_overwrite)
         features_dir = self._work_dir / "features"
         with (
             Progress(
@@ -75,9 +83,12 @@ class IndexCommand(BaseCommand):
                 except Exception as e:
                     progress.update(task_id, description=f"Error: {str(e)}")
 
+            futures = []
             for video_path in features_dir.glob("*/"):
                 video_id = video_path.stem
-                executor.submit(index_one_video, video_id)
+                futures.append(executor.submit(index_one_video, video_id))
+            for future in futures:
+                future.result()
 
     def _index_features(
         self, database, video_id, do_update, update_progress
