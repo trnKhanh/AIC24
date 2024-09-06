@@ -55,7 +55,7 @@ class IndexCommand(BaseCommand):
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
             ) as progress,
-            ThreadPoolExecutor(os.cpu_count()) as executor,
+            ThreadPoolExecutor(int(os.cpu_count() or 0) // 2) as executor,
         ):
 
             def update_progress(task_id):
@@ -96,7 +96,7 @@ class IndexCommand(BaseCommand):
         update_progress(description="Indexing...")
         features_dir = self._work_dir / "features" / video_id
         for frame_path in features_dir.glob("*/"):
-            frame_id = int(frame_path.stem)
+            frame_id = frame_path.stem
             data = {
                 "frame_id": f"{video_id}#{frame_id}",  # This is because Milvus does not allow composite primary key
                 "cluster_id": 0,

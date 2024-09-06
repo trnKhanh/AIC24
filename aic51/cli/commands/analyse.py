@@ -2,6 +2,7 @@ import os
 import math
 from pathlib import Path
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -51,7 +52,6 @@ class AnalyseCommand(BaseCommand):
                 f"Models for features extraction are not specified. Check your config file."
             )
         video_ids = self._init_features_dir(do_overwrite)
-                
 
         for model in models:
             model_name = model["name"]
@@ -68,38 +68,51 @@ class AnalyseCommand(BaseCommand):
                     "CUDA is not available, fallbacked to use CPU"
                 )
 
-
-            with Progress(
-                TextColumn("{task.fields[name]}"),
-                TextColumn(":"),
-                SpinnerColumn(),
-                *Progress.get_default_columns(),
-                TimeElapsedColumn(),
-            ) as progress:
+            with (
+                Progress(
+                    TextColumn("{task.fields[name]}"),
+                    TextColumn(":"),
+                    SpinnerColumn(),
+                    *Progress.get_default_columns(),
+                    TimeElapsedColumn(),
+                ) as progress,
+                ThreadPoolExecutor(int(os.cpu_count() or 0) // 2) as executor,
+            ):
 
                 def update_progress(task_id):
                     return lambda *args, **kwargs: progress.update(
                         task_id, *args, **kwargs
                     )
 
-                for video_id in video_ids:
+                def analyse_one_video(video_id):
                     task_id = progress.add_task(
                         description="Processing...",
                         name=video_id,
                     )
-                    status_ok = self._extract_features(
-                        model_name,
-                        clip,
-                        video_id,
-                        batch_size,
-                        update_progress(task_id),
-                    )
-                    progress.update(
-                        task_id,
-                        completed=1,
-                        total=1,
-                        description=("Finished" if status_ok else "Skipped"),
-                    )
+                    try:
+                        status_ok = self._extract_features(
+                            model_name,
+                            clip,
+                            video_id,
+                            batch_size,
+                            update_progress(task_id),
+                        )
+                        progress.update(
+                            task_id,
+                            completed=1,
+                            total=1,
+                            description=(
+                                "Finished" if status_ok else "Skipped"
+                            ),
+                        )
+                    except Exception as e:
+                        progress.update(task_id, description=f"Error: {str(e)}")
+
+                futures = []
+                for video_id in video_ids:
+                    futures.append(executor.submit(analyse_one_video, video_id))
+                for future in futures:
+                    future.result()
 
     def _init_features_dir(self, do_overwrite):
         keyframes_dir = self._work_dir / "keyframes"
@@ -116,7 +129,7 @@ class AnalyseCommand(BaseCommand):
             video_ids.append(video_path.stem)
             video_features_dir.mkdir(parents=True, exist_ok=True)
         return video_ids
-        
+
     def _get_keyframes_list(self, video_id):
         keyframes_path = self._work_dir / "keyframes" / video_id
 

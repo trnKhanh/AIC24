@@ -97,7 +97,9 @@ class AddCommand(BaseCommand):
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
             ) as progress,
-            concurrent.futures.ThreadPoolExecutor(os.cpu_count()) as executor,
+            concurrent.futures.ThreadPoolExecutor(
+                int(os.cpu_count() or 0) // 2
+            ) as executor,
         ):
 
             def show_progress(task_id):
