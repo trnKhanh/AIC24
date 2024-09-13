@@ -21,9 +21,10 @@ export async function getAnswersByIds(ids) {
 
 export async function addAnswer(answer) {
   const answers = await getAnswers();
-  const id = answers.length;
+  let id = (await localforage.getItem("id_ptr")) || 0;
   await localforage.setItem("answers", [...answers, { id: id, ...answer }]);
   const res = await localforage.getItem("answers");
+  await localforage.setItem("id_ptr", id + 1);
   return res;
 }
 export async function updateAnswer(id, new_answer) {
@@ -49,8 +50,9 @@ export async function deleteAnswer(id) {
 }
 
 export function getCSV(answer, n, step) {
+  console.log(answer);
   let fileData = "";
-  let center = parseInt(answer.frame_id);
+  let center = parseInt(answer.frame_counter);
 
   for (
     let offset = 0, i = 0, left = false;

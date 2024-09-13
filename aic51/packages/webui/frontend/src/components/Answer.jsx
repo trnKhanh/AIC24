@@ -41,6 +41,7 @@ function AnswerItem({
   };
   const handleOnPlay = async () => {
     const frameInfo = await getFrameInfo(answer.video_id, answer.frame_id);
+    frameInfo.frame_counter = answer.frame_counter;
     playVideo(frameInfo);
   };
   const handleOnFind = async () => {
@@ -89,7 +90,7 @@ function AnswerItem({
             name="query_id"
             placeholder="Query ID"
             autoComplete="off"
-            value={answer.query_id}
+            defaultValue={answer.query_id}
             className="basis-1/3 py-1 px-2 border-black border-r-2 min-w-0 focus:outline-none"
           />
           <input
@@ -98,7 +99,7 @@ function AnswerItem({
             name="video_id"
             placeholder="Video ID"
             autoComplete="off"
-            value={answer.video_id}
+            defaultValue={answer.video_id}
             className="basis-1/3 py-1 px-2 border-black border-r-2 min-w-0 focus:outline-none"
           />
           <input
@@ -107,16 +108,25 @@ function AnswerItem({
             name="frame_id"
             placeholder="Frame ID"
             autoComplete="off"
-            value={answer.frame_id}
+            defaultValue={answer.frame_id}
             className="basis-1/3 py-1 px-2 min-w-0 focus:outline-none"
+          />
+          <input
+            required
+            type="text"
+            name="frame_counter"
+            placeholder="Frame Counter"
+            autoComplete="off"
+            defaultValue={answer.frame_counter}
+            className="flex-[1_0_50%] border-black border-r-2 py-1 px-2 min-w-0 focus:outline-none mt-2"
           />
           <input
             type="text"
             name="answer"
             placeholder="Answer"
             autoComplete="off"
-            value={answer.answer}
-            className="flex-[1_0_100%] py-1 px-2 min-w-0 focus:outline-none mt-2"
+            defaultValue={answer.answer}
+            className="flex-[1_0_50%] py-1 px-2 min-w-0 focus:outline-none mt-2"
           />
           <input
             type="submit"
@@ -251,8 +261,8 @@ function AnswerHeader({}) {
         <input
           required
           type="text"
-          name="frame_id"
-          placeholder="Frame ID"
+          name="frame_counter"
+          placeholder="Frame Counter"
           autoComplete="off"
           className="basis-1/3 py-1 px-2 min-w-0 focus:outline-none"
         />
