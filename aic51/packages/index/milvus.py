@@ -69,9 +69,14 @@ class MilvusDatabase(object):
         res = self._client.get(self._collection_name, ids=[id])
         return res
 
-    def search(self, query, filter="", offset=0, limit=50, nprob=8, feature="clip"):
+    def search(
+        self, query, filter="", offset=0, limit=50, nprobe=8, feature="clip"
+    ):
         search_params = {
-            "nprob": nprob,
+            "metric_type": "COSINE",
+            "params": {
+                "nprobe": nprobe,
+            },
         }
         res = self._client.search(
             self._collection_name,
@@ -90,6 +95,10 @@ class MilvusDatabase(object):
 
     def delete(self):
         pass
+
+    def get_total(self):
+        stats = self._client.get_collection_stats(self._collection_name)
+        return stats["row_count"]
 
     @classmethod
     def start_server(cls):
