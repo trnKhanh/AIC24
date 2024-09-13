@@ -86,6 +86,7 @@ class AddCommand(BaseCommand):
                 self._logger.error(f"{video_path}: No such file")
                 sys.exit(1)
             video_paths = [video_path]
+        video_paths = sorted(video_paths, key=lambda path: path.stem)
         self._add_videos(video_paths, do_move, do_overwrite, verbose)
 
     def _add_videos(self, video_paths, do_move, do_overwrite, verbose):
