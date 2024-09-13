@@ -1,4 +1,9 @@
-import { useLoaderData, Form, useSubmit } from "react-router-dom";
+import {
+  useLoaderData,
+  Form,
+  useSubmit,
+  useOutletContext,
+} from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { search } from "../services/search.js";
@@ -9,12 +14,7 @@ import PreviousButton from "../assets/previous-btn.svg";
 import NextButton from "../assets/next-btn.svg";
 import HomeButton from "../assets/home-btn.svg";
 
-import {
-  nlist,
-  limitOptions,
-  nprobeOption,
-  modelOptions,
-} from "../resources/options.js";
+import { nlist, limitOptions, nprobeOption } from "../resources/options.js";
 
 export async function loader({ request }) {
   const url = new URL(request.url);
@@ -24,7 +24,7 @@ export async function loader({ request }) {
   const offset = searchParams.get("offset") || 0;
   const limit = searchParams.get("limit") || limitOptions[0];
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
-  const model = searchParams.get("model") || modelOptions[0];
+  const model = searchParams.get("model") || undefined;
 
   const { total, frames } = await search(q, offset, limit, nprobe, model);
 
@@ -37,6 +37,7 @@ export async function loader({ request }) {
 }
 
 export default function Search() {
+  const { modelOptions } = useOutletContext();
   const submit = useSubmit();
   const { query, params, offset, data } = useLoaderData();
   const playVideo = usePlayVideo();

@@ -156,6 +156,10 @@ async def video_endpoint(file_path: str, range: str = Header(None)):
         data, status_code=206, headers=headers, media_type="video/mp4"
     )
 
+@app.get("/api/models")
+async def models():
+    return {"models": list(clip_models.keys())}
+
 
 app.mount(
     "/assets",

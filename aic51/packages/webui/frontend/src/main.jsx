@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import Root from "./routes/root.jsx";
+import Root, { loader as RootLoader } from "./routes/root.jsx";
 import Search, { loader as SearchLoader } from "./routes/search.jsx";
 import { loader as SearchSimilarLoader } from "./routes/searchsimilar.jsx";
 import {
@@ -22,7 +22,7 @@ import "./index.css";
 
 const router = createBrowserRouter(
   createRoutesFromElements([
-    <Route path="/" element={<Root />}>
+    <Route path="/" element={<Root />} loader={RootLoader}>
       <Route path="search" element={<Search />} loader={SearchLoader} />
       <Route path="similar" element={<Search />} loader={SearchSimilarLoader} />
     </Route>,

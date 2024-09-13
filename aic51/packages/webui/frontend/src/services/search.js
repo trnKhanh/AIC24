@@ -39,3 +39,8 @@ export async function getFrameInfo(videoId, frameId) {
   const data = res.data;
   return data;
 }
+export async function getAvailableModels() {
+  const res = await axios.get(`http://127.0.0.1:${PORT}/api/models`);
+  const data = res.data;
+  return data;
+}

@@ -3,7 +3,6 @@ import {
   nlist,
   limitOptions,
   nprobeOption,
-  modelOptions,
 } from "../resources/options.js";
 
 export async function loader({ request }) {
@@ -14,7 +13,7 @@ export async function loader({ request }) {
   const offset = searchParams.get("offset") || 0;
   const limit = searchParams.get("limit") || limitOptions[0];
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
-  const model = searchParams.get("model") || modelOptions[0];
+  const model = searchParams.get("model") || undefined;
 
   const { total, frames } = await searchSimilar(
     id,
