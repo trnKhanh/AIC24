@@ -1,6 +1,4 @@
 export function getBlob(blobData, mimeType) {
-  console.log(blobData);
-  console.log(mimeType);
   const blob = new Blob([blobData], { type: mimeType });
   return blob;
 }

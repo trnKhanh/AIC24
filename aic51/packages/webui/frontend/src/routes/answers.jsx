@@ -5,7 +5,6 @@ export async function action({ params, request }) {
   const formData = await request.formData();
   const answer = Object.fromEntries(formData);
   const res = await addAnswer(answer);
-  console.log(res)
   return res;
 }
 

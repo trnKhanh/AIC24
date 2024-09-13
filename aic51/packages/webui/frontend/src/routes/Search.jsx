@@ -27,7 +27,6 @@ export async function loader({ request }) {
   const model = searchParams.get("model") || modelOptions[0];
 
   const { total, frames } = await search(q, offset, limit, nprobe, model);
-  console.log("SEARCH")
 
   return {
     query: { q },

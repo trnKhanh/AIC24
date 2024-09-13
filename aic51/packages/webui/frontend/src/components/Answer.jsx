@@ -312,14 +312,12 @@ export default function AnswerSidebar({}) {
     const zip = new JSZip();
     for (const a of downloadAnswers) {
       const csvData = getCSV(a, downloadN, downloadStep);
-      console.log(csvData)
       zip.file(`query-${a.query_id}.csv`, csvData);
     }
     zip.generateAsync({ type: "blob" }).then((content) => {
       downloadFile(content, "submission.zip");
     });
   };
-  console.log(downloadList);
 
   return (
     <div className="relative p-2">
