@@ -36,10 +36,10 @@ class AnalyseCommand(BaseCommand):
             help="Do not use gpu",
         )
         parser.add_argument(
-            "-s",
-            "--skip-overlapping",
+            "-o",
+            "--overwrite",
             dest="do_overwrite",
-            action="store_false",
+            action="store_true",
             help="Skip overlapping videos",
         )
 
