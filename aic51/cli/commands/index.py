@@ -47,12 +47,15 @@ class IndexCommand(BaseCommand):
         MilvusDatabase.start_server()
         database = MilvusDatabase(collection_name, do_overwrite)
         features_dir = self._work_dir / "features"
-        with Progress(
-            TextColumn("{task.fields[name]}"),
-            TextColumn(":"),
-            *Progress.get_default_columns(),
-            TimeElapsedColumn(),
-        ) as progress:
+        with (
+            Progress(
+                TextColumn("{task.fields[name]}"),
+                TextColumn(":"),
+                *Progress.get_default_columns(),
+                TimeElapsedColumn(),
+            ) as progress,
+            ThreadPoolExecutor(int(os.cpu_count() or 0) // 2) as executor,
+        ):
 
             def update_progress(task_id):
                 return lambda *args, **kwargs: progress.update(
@@ -79,15 +82,16 @@ class IndexCommand(BaseCommand):
                 except Exception as e:
                     progress.update(task_id, description=f"Error: {str(e)}")
 
-                progress.remove_task(task_id)
-
+            futures = []
             video_paths = sorted(
                 [d for d in features_dir.glob("*/") if d.is_dir()],
                 key=lambda path: path.stem,
             )
             for video_path in video_paths:
                 video_id = video_path.stem
-                index_one_video(video_id)
+                futures.append(executor.submit(index_one_video, video_id))
+            for future in futures:
+                future.result()
 
     def _index_features(self, database, video_id, do_update, update_progress):
         update_progress(description="Indexing...")
