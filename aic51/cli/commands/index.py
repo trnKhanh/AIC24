@@ -45,20 +45,14 @@ class IndexCommand(BaseCommand):
         self, collection_name, do_overwrite, do_update, *args, **kwargs
     ):
         MilvusDatabase.start_server()
-        # For some reasons, drop_collection works but very slow and
-        # blocks IO process. Therefore, do not specify the overwrite
-        # flag at the moment.
         database = MilvusDatabase(collection_name, do_overwrite)
         features_dir = self._work_dir / "features"
-        with (
-            Progress(
-                TextColumn("{task.fields[name]}"),
-                TextColumn(":"),
-                *Progress.get_default_columns(),
-                TimeElapsedColumn(),
-            ) as progress,
-            ThreadPoolExecutor(int(os.cpu_count() or 0) // 2) as executor,
-        ):
+        with Progress(
+            TextColumn("{task.fields[name]}"),
+            TextColumn(":"),
+            *Progress.get_default_columns(),
+            TimeElapsedColumn(),
+        ) as progress:
 
             def update_progress(task_id):
                 return lambda *args, **kwargs: progress.update(
@@ -85,16 +79,15 @@ class IndexCommand(BaseCommand):
                 except Exception as e:
                     progress.update(task_id, description=f"Error: {str(e)}")
 
-            futures = []
+                progress.remove_task(task_id)
+
             video_paths = sorted(
                 [d for d in features_dir.glob("*/") if d.is_dir()],
                 key=lambda path: path.stem,
             )
             for video_path in video_paths:
                 video_id = video_path.stem
-                futures.append(executor.submit(index_one_video, video_id))
-            for future in futures:
-                future.result()
+                index_one_video(video_id)
 
     def _index_features(self, database, video_id, do_update, update_progress):
         update_progress(description="Indexing...")
