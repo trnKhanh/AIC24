@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -16,6 +17,13 @@ class ServeCommand(BaseCommand):
 
     def add_args(self, subparser):
         parser = subparser.add_parser("serve", help="Start RestAPI and WebUI")
+        parser.add_argument(
+            "-p",
+            "--port",
+            dest="port",
+            default=5100,
+            type=int,
+        )
 
         parser.add_argument(
             "-d",
@@ -35,7 +43,7 @@ class ServeCommand(BaseCommand):
 
         parser.set_defaults(func=self)
 
-    def __call__(self, dev_mode, workers, *args, **kwargs):
+    def __call__(self, port, dev_mode, workers, *args, **kwargs):
         MilvusDatabase.start_server()
         if len(GlobalConfig.get("webui", "features") or []) == 0:
             self._logger.error(
@@ -51,11 +59,50 @@ class ServeCommand(BaseCommand):
         params = {}
         if dev_mode:
             params = {**params, **dev_params}
+            dev_cmd = ["npm", "run", "dev"]
+            dev_env = os.environ.copy()
+            dev_env["VITE_PORT"] = str(port)
+
+            p = subprocess.Popen(
+                dev_cmd,
+                env=dev_env,
+                cwd=str(
+                    Path(__file__).parent / "../../packages/webui/frontend"
+                ),
+            )
+        else:
+            self._build_frontend(port)
+            p = None
 
         uvicorn.run(
             f"aic51.packages.webui.backend.app:app",
-            port=5000,
+            port=port,
             log_level="info",
             workers=workers,
             **params,
         )
+        if dev_mode and p is not None:
+            p.terminate()
+            p.wait()
+
+    def _build_frontend(self, port):
+        build_cmd = ["npm", "run", "build"]
+        build_env = os.environ.copy()
+        build_env["VITE_PORT"] = str(port)
+
+        subprocess.run(
+            build_cmd,
+            env=build_env,
+            cwd=str(Path(__file__).parent / "../../packages/webui/frontend"),
+        )
+        built_dir = Path(__file__).parent / "../../packages/webui/frontend/dist"
+
+        dist_dir = self._work_dir / ".dist"
+        shutil.rmtree(dist_dir)
+        dist_dir.mkdir(parents=True, exist_ok=True)
+
+        for file in built_dir.glob("**/*"):
+            shutil.move(
+                file,
+                dist_dir,
+            )
