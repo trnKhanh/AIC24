@@ -57,7 +57,7 @@ export function getCSV(answer, n, step) {
   for (
     let offset = 0, i = 0, left = false;
     i < n;
-    offset += step, ++i, left = !left
+    offset += (!left ? step : 0), ++i, left = !left
   ) {
     const curFrame = left
       ? Math.round(center - offset)
@@ -65,6 +65,7 @@ export function getCSV(answer, n, step) {
     if (fileData !== "") fileData += "\n";
     fileData += `${answer.video_id},${Math.round(curFrame)},${answer.answer}`;
   }
+  console.log(fileData);
 
   return fileData;
 }
