@@ -1,16 +1,33 @@
 import { searchSimilar } from "../services/search.js";
+import {
+  nlist,
+  limitOptions,
+  nprobeOption,
+  modelOptions,
+} from "../resources/options.js";
 
 export async function loader({ request }) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
 
   const id = searchParams.get("id");
-  const offset = searchParams.get("offset") || undefined;
-  const limit = searchParams.get("limit") || undefined;
-  const nprob = searchParams.get("nprob") || undefined;
-  const model = searchParams.get("model") || undefined;
+  const offset = searchParams.get("offset") || 0;
+  const limit = searchParams.get("limit") || limitOptions[0];
+  const nprobe = searchParams.get("nprobe") || nprobeOption[0];
+  const model = searchParams.get("model") || modelOptions[0];
 
-  const { frames } = await searchSimilar(id, offset, limit, nprob, model);
+  const { total, frames } = await searchSimilar(
+    id,
+    offset,
+    limit,
+    nprobe,
+    model,
+  );
 
-  return { id, offset, limit, nprob, model, frames: frames };
+  return {
+    query: { id },
+    params: { limit, nprobe, model },
+    offset,
+    data: { total, frames },
+  };
 }

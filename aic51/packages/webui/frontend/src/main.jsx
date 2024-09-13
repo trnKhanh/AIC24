@@ -8,18 +8,31 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import Root from "./routes/Root.jsx";
-import Search, { loader as SearchLoader } from "./routes/Search.jsx";
-import {loader as SearchSimilarLoader} from "./routes/SearchSimilar.jsx"
-import "./index.css"
+import Root from "./routes/root.jsx";
+import Search, { loader as SearchLoader } from "./routes/search.jsx";
+import { loader as SearchSimilarLoader } from "./routes/searchsimilar.jsx";
+import {
+  action as AnswerAction,
+  loader as AnswerLoader,
+} from "./routes/answers.jsx";
+import { action as AnswerDeleteAction } from "./routes/answersdelete.jsx";
+import { action as AnswerEditAction } from "./routes/answeredit.jsx";
+
+import "./index.css";
 
 const router = createBrowserRouter(
-  createRoutesFromElements(
+  createRoutesFromElements([
     <Route path="/" element={<Root />}>
       <Route path="search" element={<Search />} loader={SearchLoader} />
       <Route path="similar" element={<Search />} loader={SearchSimilarLoader} />
     </Route>,
-  ),
+    <Route path="answers" action={AnswerAction} loader={AnswerLoader}>
+      <Route path=":answerId">
+        <Route path="delete" action={AnswerDeleteAction} />
+        <Route path="edit" action={AnswerEditAction} />
+      </Route>
+    </Route>,
+  ]),
 );
 
 ReactDOM.createRoot(document.getElementById("root")).render(
