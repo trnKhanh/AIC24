@@ -1,9 +1,7 @@
 analyse:
   features: &analyse_features
-    - name: "clip_b_32"
-      pretrained_model: "openai/clip-vit-base-patch32"
-    - name: "clip_b_16"
-      pretrained_model: "openai/clip-vit-base-patch16"
+    - name: "clip_l_14"
+      pretrained_model: "openai/clip-vit-large-patch14"
   num_workers: 1
   pin_memory: true
 
@@ -13,25 +11,16 @@ milvus:
       datatype: "VARCHAR"
       max_length: 100
       is_primary: true
-    - field_name: "feature_clip_b_32"
+    - field_name: "feature_clip_l_14"
       datatype: "FLOAT_VECTOR"
-      dim: 512
-    - field_name: "feature_clip_b_16"
-      datatype: "FLOAT_VECTOR"
-      dim: 512
+      dim: 768
     - field_name: "cluster_id"
       datatype: "INT64"
   indices:
-    - field_name: "feature_clip_b_32"
+    - field_name: "feature_clip_l_14"
       metric_type: "COSINE"
       index_type: "IVF_FLAT"
-      index_name: "clip_b_32_index"
-      params:
-        nlist: 128
-    - field_name: "feature_clip_b_16"
-      metric_type: "COSINE"
-      index_type: "IVF_FLAT"
-      index_name: "clip_b_16_index"
+      index_name: "clip_l_14_index"
       params:
         nlist: 128
 
