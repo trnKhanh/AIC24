@@ -61,7 +61,7 @@ class AnalyseCommand(BaseCommand):
                 f"Start extracting features using {model_name} ({pretrained_model})"
             )
             if gpu and torch.cuda.is_available():
-                device_count = torch.cuda.device_count()
+                device_count = 2
                 clip.to("cuda")
             else:
                 device_count = os.cpu_count()
