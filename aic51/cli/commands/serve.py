@@ -45,6 +45,7 @@ class ServeCommand(BaseCommand):
 
     def __call__(self, port, dev_mode, workers, *args, **kwargs):
         MilvusDatabase.start_server()
+        self._install_frontend()
         if len(GlobalConfig.get("webui", "features") or []) == 0:
             self._logger.error(
                 f'No models found in "{GlobalConfig.CONFIG_FILE}". Check your "{GlobalConfig.CONFIG_FILE}"'
@@ -84,6 +85,13 @@ class ServeCommand(BaseCommand):
         if dev_mode and p is not None:
             p.terminate()
             p.wait()
+
+    def _install_frontend(self):
+        install_cmd = ["npm", "install"]
+        subprocess.run(
+            install_cmd,
+            cwd=str(Path(__file__).parent / "../../packages/webui/frontend"),
+        )
 
     def _build_frontend(self, port):
         build_cmd = ["npm", "run", "build"]
