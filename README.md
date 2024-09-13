@@ -8,12 +8,20 @@
 - Nguyen Ngoc Thien An
 - Huynh Minh Duc
 
+## Installation
+
+- Run the following command to install `aic51-cli` CLI:
+
+```bash
+pip install git+https://github.com/trnKhanh/AIC24.git
+```
+
 ## Plan
 
-- [ ] CLI
-  - [ ] Import videos
-  - [ ] Process videos
-  - [ ] Index videos
-  - [ ] Search videos
-  - [ ] Start RestAPI
-- [ ] WebUI
+- [x] CLI
+  - [x] Import videos
+  - [x] Process videos
+  - [x] Index videos
+  - [x] Search videos
+  - [x] Start RestAPI
+- [x] WebUI
