@@ -163,6 +163,7 @@ class AnalyseCommand(BaseCommand):
                 completed=finished_batches, total=total_batches
             ),
         )
+        features = features.cpu()
         update_progress(
             completed=0,
             total=features.size(0),
