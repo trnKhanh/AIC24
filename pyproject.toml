@@ -31,5 +31,7 @@ packages = [
   "aic51.cli", 
   "aic51.packages", 
   "aic51.config",
+  "aic51.layout", 
+  "aic51.milvus-standalone", 
 ]
 
