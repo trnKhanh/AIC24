@@ -106,7 +106,8 @@ class ServeCommand(BaseCommand):
         built_dir = Path(__file__).parent / "../../packages/webui/frontend/dist"
 
         dist_dir = self._work_dir / ".dist"
-        shutil.rmtree(dist_dir)
+        if dist_dir.exists():
+            shutil.rmtree(dist_dir)
         dist_dir.mkdir(parents=True, exist_ok=True)
 
         for file in built_dir.glob("**/*"):

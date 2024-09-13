@@ -117,7 +117,10 @@ class AnalyseCommand(BaseCommand):
     def _init_features_dir(self, do_overwrite):
         keyframes_dir = self._work_dir / "keyframes"
         features_dir = self._work_dir / "features"
-        video_paths = sorted([d for d in keyframes_dir.glob("*/")], key=lambda path: path.stem)
+        video_paths = sorted(
+            [d for d in keyframes_dir.glob("*/") if d.is_dir()],
+            key=lambda path: path.stem,
+        )
         video_ids = []
         for video_path in video_paths:
             video_features_dir = features_dir / video_path.stem
