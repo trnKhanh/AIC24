@@ -34,7 +34,7 @@ function VideoPlayer({ frameInfo, onCancle }) {
   useEffect(() => {
     const videoElement = document.querySelector("#playing-video");
     videoElement.currentTime =
-      parseInt(frameInfo.frame_counter || frameInfo.frame_id) / 25 - 0.25;
+      parseInt(frameInfo.frame_counter || frameInfo.frame_id) / 25 - 0.5;
     videoElement.focus();
 
     const handleKeyDown = (e) => {

@@ -15,7 +15,7 @@ export async function loader({ request }) {
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
   const model = searchParams.get("model") || undefined;
 
-  const { total, frames } = await searchSimilar(
+  const { total, frames, params } = await searchSimilar(
     id,
     offset,
     limit,
@@ -25,7 +25,7 @@ export async function loader({ request }) {
 
   return {
     query: { id },
-    params: { limit, nprobe, model },
+    params,
     offset,
     data: { total, frames },
   };

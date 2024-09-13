@@ -26,11 +26,17 @@ export async function loader({ request }) {
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
   const model = searchParams.get("model") || undefined;
 
-  const { total, frames } = await search(q, offset, limit, nprobe, model);
+  const { total, frames, params } = await search(
+    q,
+    offset,
+    limit,
+    nprobe,
+    model,
+  );
 
   return {
     query: { q },
-    params: { limit, nprobe, model },
+    params,
     offset,
     data: { total, frames },
   };

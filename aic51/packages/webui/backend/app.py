@@ -72,7 +72,12 @@ async def search(
             )
         )
 
-    return {"total": database.get_total(), "frames": frames}
+    params = {
+        "model": model,
+        "limit": limit,
+        "nprobe": nprobe,
+    }
+    return {"total": database.get_total(), "frames": frames, "params": params}
 
 
 @app.get("/api/similar")
@@ -110,7 +115,12 @@ async def similar(
             )
         )
 
-    return {"total": database.get_total(), "frames": frames}
+    params = {
+        "model": model,
+        "limit": limit,
+        "nprobe": nprobe,
+    }
+    return {"total": database.get_total(), "frames": frames, "params": params}
 
 
 @app.get("/api/frame_info")
@@ -155,6 +165,7 @@ async def video_endpoint(file_path: str, range: str = Header(None)):
     return Response(
         data, status_code=206, headers=headers, media_type="video/mp4"
     )
+
 
 @app.get("/api/models")
 async def models():
