@@ -54,31 +54,53 @@ class IndexCommand(BaseCommand):
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
             ) as progress,
+            ThreadPoolExecutor(int(os.cpu_count() or 0) // 2) as executor,
         ):
+
+            def update_progress(task_id):
+                return lambda *args, **kwargs: progress.update(
+                    task_id, *args, **kwargs
+                )
+
+            def index_one_video(video_id):
+                task_id = progress.add_task(
+                    description="Processing...", name=video_id
+                )
+                try:
+                    self._index_features(
+                        database,
+                        video_id,
+                        do_update,
+                        update_progress(task_id),
+                    )
+                    progress.update(
+                        task_id,
+                        completed=1,
+                        total=1,
+                        description="Finished",
+                    )
+                except Exception as e:
+                    progress.update(task_id, description=f"Error: {str(e)}")
+                progress.remove_task(task_id)
+
+            futures = []
             video_paths = sorted(
                 [d for d in features_dir.glob("*/") if d.is_dir()],
                 key=lambda path: path.stem,
             )
-            task_id = progress.add_task(
-                "Gathering features...",
-                completed=0,
-                total=len(video_paths),
-                name="",
-            )
-            data_list = []
             for video_path in video_paths:
-                progress.update(task_id, name=video_path.stem)
                 video_id = video_path.stem
-                data_list.extend(self._get_features(video_id))
-                progress.update(task_id, advance=1)
+                futures.append(executor.submit(index_one_video, video_id))
+            for future in futures:
+                future.result()
 
-            res = database.insert(data_list, do_update)
-            self._logger.info(f"Successfully inserted {res['insert']} records")
-
-    def _get_features(self, video_id):
+    def _index_features(self, database, video_id, do_update, update_progress):
+        update_progress(description="Indexing...")
         features_dir = self._work_dir / "features" / video_id
         data_list = []
         for frame_path in features_dir.glob("*/"):
+            if not frame_path.is_dir():
+                continue
             frame_id = frame_path.stem
             data = {
                 "frame_id": f"{video_id}#{frame_id}",  # This is because Milvus does not allow composite primary key
@@ -91,4 +113,4 @@ class IndexCommand(BaseCommand):
                     f"feature_{feature_path.stem}": feature,
                 }
             data_list.append(data)
-        return data_list
+        database.insert(data_list, do_update)
