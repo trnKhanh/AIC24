@@ -162,6 +162,19 @@ class AddCommand(BaseCommand):
         else:
             shutil.copy(video_path, output_path)
 
+        ffmpeg_command = (
+            ["ffmpeg"]
+            + [
+                "-i",
+                f"{output_path}",
+            ]
+            + ["-filter:v", "scale=640:-1", "-c:a", "copy"]
+            + [
+                f"{output_path.stem}.mp4",
+            ]
+        )
+        res = subprocess.run(ffmpeg_command)
+
         return output_path, video_id
 
     def _extract_keyframes(self, video_path, update_progress):
@@ -198,7 +211,7 @@ class AddCommand(BaseCommand):
             + [
                 "-frame_pts",
                 "true",
-                f"{keyframe_dir / f'%{num_digits}d.png'}",
+                f"{keyframe_dir / f'%{num_digits}d.jpg'}",
             ]
         )
         res = subprocess.run(ffmpeg_command)
