@@ -198,7 +198,7 @@ class AddCommand(BaseCommand):
             + [
                 "-frame_pts",
                 "true",
-                f"{keyframe_dir / f'%{num_digits}d.png'}",
+                f"{keyframe_dir / f'%{num_digits}d.jpg'}",
             ]
         )
         res = subprocess.run(ffmpeg_command)
