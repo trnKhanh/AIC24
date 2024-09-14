@@ -61,9 +61,9 @@ class MilvusDatabase(object):
 
     def insert(self, data, do_update=False):
         if do_update:
-            self._client.upsert(self._collection_name, data)
+            return self._client.upsert(self._collection_name, data)
         else:
-            self._client.insert(self._collection_name, data)
+            return self._client.insert(self._collection_name, data)
 
     def get(self, id):
         res = self._client.get(self._collection_name, ids=[id])
