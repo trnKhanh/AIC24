@@ -77,6 +77,7 @@ class ServeCommand(BaseCommand):
 
         uvicorn.run(
             f"aic51.packages.webui.backend.app:app",
+            host="0.0.0.0",
             port=port,
             log_level="info",
             workers=workers,
