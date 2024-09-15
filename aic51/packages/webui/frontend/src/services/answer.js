@@ -57,13 +57,15 @@ export function getCSV(answer, n, step) {
   for (
     let offset = 0, i = 0, left = false;
     i < n;
-    offset += (!left ? step : 0), ++i, left = !left
+    offset += !left ? step : 0, ++i, left = !left
   ) {
     const curFrame = left
       ? Math.round(center - offset)
       : Math.round(center + offset);
     if (fileData !== "") fileData += "\n";
-    fileData += `${answer.video_id},${Math.round(curFrame)},${answer.answer}`;
+    if (answer.answer.length > 0)
+      fileData += `${answer.video_id},${Math.round(curFrame)},${answer.answer}`;
+    else fileData += `${answer.video_id},${Math.round(curFrame)}`;
   }
   console.log(fileData);
 
