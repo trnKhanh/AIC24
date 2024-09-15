@@ -97,6 +97,7 @@ class AnalyseCommand(BaseCommand):
                             clip,
                             video_id,
                             batch_size,
+                            do_overwrite,
                             update_progress(task_id),
                         )
                         progress.update(
@@ -109,6 +110,7 @@ class AnalyseCommand(BaseCommand):
                         )
                     except Exception as e:
                         progress.update(task_id, description=f"Error: {str(e)}")
+                    progress.remove_task(task_id)
 
                 futures = []
                 for video_id in video_ids:
@@ -126,11 +128,6 @@ class AnalyseCommand(BaseCommand):
         video_ids = []
         for video_path in video_paths:
             video_features_dir = features_dir / video_path.stem
-            if video_features_dir.exists():
-                if do_overwrite:
-                    shutil.rmtree(video_features_dir)
-                else:
-                    continue
             video_ids.append(video_path.stem)
             video_features_dir.mkdir(parents=True, exist_ok=True)
         return video_ids
@@ -150,6 +147,7 @@ class AnalyseCommand(BaseCommand):
         clip,
         video_id,
         batch_size,
+        do_overwrite,
         update_progress,
     ):
         update_progress(description="Extracting features...")
@@ -172,8 +170,8 @@ class AnalyseCommand(BaseCommand):
         for i, path in enumerate(keyframe_files):
             feature_file = features_dir / path.stem / f"{model_name}.npy"
             feature_file.parent.mkdir(parents=True, exist_ok=True)
-
-            np.save(feature_file, features[i])
+            if not feature_file.exists() or do_overwrite:
+                np.save(feature_file, features[i])
             update_progress(advance=1)
 
         return 1

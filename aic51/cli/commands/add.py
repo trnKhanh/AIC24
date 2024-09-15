@@ -14,6 +14,7 @@ from rich.progress import (
     SpinnerColumn,
     TimeElapsedColumn,
 )
+import cv2
 
 from .command import BaseCommand
 from ...config import GlobalConfig
@@ -142,6 +143,7 @@ class AddCommand(BaseCommand):
                         task_id,
                         description=f"Error: {str(e)}",
                     )
+                progress.remove_task(task_id)
 
             for path in video_paths:
                 executor.submit(add_one_video, path)
@@ -172,33 +174,47 @@ class AddCommand(BaseCommand):
             shutil.rmtree(keyframe_dir)
 
         keyframe_dir.mkdir(parents=True, exist_ok=True)
-        ffprobe_comand = [
-            "ffprobe",
-            "-v",
-            "quiet",
-            "-select_streams",
-            "v:0",
-            "-count_frames",
-            "-print_format",
-            "json",
-            "-show_streams",
-            video_path,
-        ]
-        res = subprocess.run(ffprobe_comand, capture_output=True, text=True)
-        num_frames = json.loads(res.stdout)["streams"][0]["nb_frames"]
-        num_digits = len(str(num_frames))
+        keyframes_list = self._get_keyframes_list(video_path)
+        max_scene_length = GlobalConfig.get("add", "max_scene_length") or 25
 
-        ffmpeg_command = (
-            ["ffmpeg", "-y", "-v", "quiet", "-skip_frame", "nokey"]
+        update_progress(description=f"Saving keyframes...")
+
+        frame_counter = 0
+        scene_length = 0
+        cap = cv2.VideoCapture(str(video_path))
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if (
+                scene_length >= max_scene_length
+                or frame_counter in keyframes_list
+            ):
+                cv2.imwrite(
+                    keyframe_dir / f"{frame_counter:06d}.jpg",
+                    frame,
+                    [cv2.IMWRITE_JPEG_QUALITY, 50],
+                )
+                scene_length = 0
+            scene_length += 1
+            frame_counter += 1
+        cap.release()
+
+    def _get_keyframes_list(self, video_path):
+        ffprobe_cmd = (
+            ["ffprobe", "-v", "quiet"]
             + [
-                "-i",
-                f"{video_path}",
+                "-select_streams",
+                "v",
+                "-show_frames",
+                "-show_entries",
+                "frame=pict_type",
             ]
-            + ["-fps_mode", "vfr"]
-            + [
-                "-frame_pts",
-                "true",
-                f"{keyframe_dir / f'%{num_digits}d.jpg'}",
-            ]
+            + ["-of", "csv", str(video_path)]
         )
-        res = subprocess.run(ffmpeg_command)
+        res = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
+        keyframes_list = res.stdout.strip().split("\n")
+        keyframes_list = [
+            i for i, x in enumerate(keyframes_list) if x.split(",")[1] == "I"
+        ]
+        return keyframes_list

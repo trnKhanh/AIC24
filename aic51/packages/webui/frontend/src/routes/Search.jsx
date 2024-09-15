@@ -33,9 +33,10 @@ export async function loader({ request }) {
     nprobe,
     model,
   );
+  const query = q ? { q } : {};
 
   return {
-    query: { q },
+    query,
     params,
     offset,
     data: { total, frames },
