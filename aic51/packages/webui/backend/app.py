@@ -59,7 +59,7 @@ async def search(
         video_frame_str = data["frame_id"]
         video_id, frame_id = video_frame_str.split("#")
         frame_uri = (
-            f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
+            f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.png"
         )
         video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
         frames.append(
@@ -102,7 +102,7 @@ async def similar(
         video_frame_str = data["frame_id"]
         video_id, frame_id = video_frame_str.split("#")
         frame_uri = (
-            f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
+            f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.png"
         )
         video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
         frames.append(
@@ -128,7 +128,7 @@ async def frame_info(request: Request, video_id: str, frame_id: str):
     id = f"{video_id}#{frame_id}"
     record = database.get(id)
     frame_uri = (
-        f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
+        f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.png"
     )
     video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
     return dict(
