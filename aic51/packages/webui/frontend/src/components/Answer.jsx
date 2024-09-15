@@ -40,7 +40,7 @@ function AnswerItem({
     }
   };
   const handleOnPlay = async () => {
-    const frameInfo = await getFrameInfo(answer.video_id, answer.frame_id);
+    const frameInfo = await getFrameInfo(answer.video_id, answer.frame_counter);
     frameInfo.frame_counter = answer.frame_counter;
     playVideo(frameInfo);
   };
@@ -306,10 +306,6 @@ export default function AnswerSidebar({}) {
     } else {
       setDownloadList([...downloadList, answer.id]);
     }
-  };
-  const handleOnPlay = async (answer) => {
-    const frameInfo = await getFrameInfo(answer.video_id, answer.frame_id);
-    playVideo(frameInfo);
   };
   const handleOnSingleDownload = async (a) => {
     const csvData = getCSV(a, downloadN, downloadStep);
