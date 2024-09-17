@@ -91,7 +91,7 @@ class AddCommand(BaseCommand):
         self._add_videos(video_paths, do_move, do_overwrite, verbose)
 
     def _add_videos(self, video_paths, do_move, do_overwrite, verbose):
-        max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0 
+        max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0
         with (
             Progress(
                 TextColumn("{task.fields[name]}"),
@@ -139,12 +139,12 @@ class AddCommand(BaseCommand):
                             else f"Skipped"
                         ),
                     )
+                    progress.remove_task(task_id)
                 except Exception as e:
                     progress.update(
                         task_id,
                         description=f"Error: {str(e)}",
                     )
-                progress.remove_task(task_id)
 
             for path in video_paths:
                 executor.submit(add_one_video, path)
@@ -215,7 +215,8 @@ class AddCommand(BaseCommand):
         )
         res = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
         keyframes_list = res.stdout.strip().split("\n")
+        keyframes_list = [x for x in keyframes_list if x.startswith("frame")]
         keyframes_list = [
-            i for i, x in enumerate(keyframes_list) if x.split(",")[1] == "I"
+            i for i, x in enumerate(keyframes_list) if x.startswith("frame,I")
         ]
         return keyframes_list

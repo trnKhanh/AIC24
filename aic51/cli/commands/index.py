@@ -83,9 +83,9 @@ class IndexCommand(BaseCommand):
                         total=1,
                         description="Finished",
                     )
+                    progress.remove_task(task_id)
                 except Exception as e:
                     progress.update(task_id, description=f"Error: {str(e)}")
-                progress.remove_task(task_id)
 
             futures = []
             video_paths = sorted(
