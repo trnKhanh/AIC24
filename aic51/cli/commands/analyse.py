@@ -62,10 +62,13 @@ class AnalyseCommand(BaseCommand):
                 f"Start extracting features using {model_name} ({pretrained_model})"
             )
             if gpu and torch.cuda.is_available():
-                device_count = 2
+                max_workers = 1
                 clip.to("cuda")
             else:
-                device_count = os.cpu_count()
+                max_workers = round((os.cpu_count() or 0) * max_workers_ratio)
+                if max_workers <= 0:
+                    max_workers = 1
+
                 clip.to("cpu")
                 self._logger.warning(
                     "CUDA is not available, fallbacked to use CPU"
@@ -78,10 +81,9 @@ class AnalyseCommand(BaseCommand):
                     SpinnerColumn(),
                     *Progress.get_default_columns(),
                     TimeElapsedColumn(),
+                    disable=not verbose,
                 ) as progress,
-                ThreadPoolExecutor(
-                    round((os.cpu_count() or 0) * max_workers_ratio) or 1
-                ) as executor,
+                ThreadPoolExecutor(max_workers) as executor,
             ):
 
                 def update_progress(task_id):

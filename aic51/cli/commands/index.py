@@ -43,7 +43,7 @@ class IndexCommand(BaseCommand):
         parser.set_defaults(func=self)
 
     def __call__(
-        self, collection_name, do_overwrite, do_update, *args, **kwargs
+        self, collection_name, do_overwrite, do_update, verbose, *args, **kwargs
     ):
         MilvusDatabase.start_server()
         database = MilvusDatabase(collection_name, do_overwrite)
@@ -55,6 +55,7 @@ class IndexCommand(BaseCommand):
                 TextColumn(":"),
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
+                disable=not verbose,
             ) as progress,
             ThreadPoolExecutor(
                 round((os.cpu_count() or 0) * max_workers_ratio) or 1

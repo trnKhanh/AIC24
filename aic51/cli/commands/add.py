@@ -99,6 +99,7 @@ class AddCommand(BaseCommand):
                 SpinnerColumn(),
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
+                disable=not verbose,
             ) as progress,
             ThreadPoolExecutor(
                 round((os.cpu_count() or 0) * max_workers_ratio) or 1
