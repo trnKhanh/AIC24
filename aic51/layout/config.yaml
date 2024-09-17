@@ -1,3 +1,4 @@
+max_workers_ratio: 1.0
 add:
   max_scene_length: 25
 analyse:

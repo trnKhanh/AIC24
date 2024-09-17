@@ -47,6 +47,7 @@ class AnalyseCommand(BaseCommand):
 
     def __call__(self, batch_size, gpu, do_overwrite, verbose, *args, **kwargs):
         models = GlobalConfig.get("analyse", "features")
+        max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0
         if models is None:
             raise RuntimeError(
                 f"Models for features extraction are not specified. Check your config file."
@@ -78,7 +79,9 @@ class AnalyseCommand(BaseCommand):
                     *Progress.get_default_columns(),
                     TimeElapsedColumn(),
                 ) as progress,
-                ThreadPoolExecutor(int(device_count or 2) // 2) as executor,
+                ThreadPoolExecutor(
+                    round((os.cpu_count() or 0) * max_workers_ratio) or 1
+                ) as executor,
             ):
 
                 def update_progress(task_id):

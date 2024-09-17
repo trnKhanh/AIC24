@@ -5,7 +5,7 @@ import shutil
 import sys
 import logging
 from pathlib import Path
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 import json
 from rich.progress import (
@@ -91,6 +91,7 @@ class AddCommand(BaseCommand):
         self._add_videos(video_paths, do_move, do_overwrite, verbose)
 
     def _add_videos(self, video_paths, do_move, do_overwrite, verbose):
+        max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0 
         with (
             Progress(
                 TextColumn("{task.fields[name]}"),
@@ -99,8 +100,8 @@ class AddCommand(BaseCommand):
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
             ) as progress,
-            concurrent.futures.ThreadPoolExecutor(
-                int(os.cpu_count() or 0) // 2
+            ThreadPoolExecutor(
+                round((os.cpu_count() or 0) * max_workers_ratio) or 1
             ) as executor,
         ):
 

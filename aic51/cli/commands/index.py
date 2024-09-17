@@ -7,6 +7,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from .command import BaseCommand
 from ...packages.index import MilvusDatabase
+from ...config import GlobalConfig
 
 
 class IndexCommand(BaseCommand):
@@ -47,6 +48,7 @@ class IndexCommand(BaseCommand):
         MilvusDatabase.start_server()
         database = MilvusDatabase(collection_name, do_overwrite)
         features_dir = self._work_dir / "features"
+        max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0
         with (
             Progress(
                 TextColumn("{task.fields[name]}"),
@@ -54,7 +56,9 @@ class IndexCommand(BaseCommand):
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
             ) as progress,
-            ThreadPoolExecutor(int(os.cpu_count() or 0) // 2) as executor,
+            ThreadPoolExecutor(
+                round((os.cpu_count() or 0) * max_workers_ratio) or 1
+            ) as executor,
         ):
 
             def update_progress(task_id):
