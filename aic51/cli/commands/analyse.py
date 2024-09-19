@@ -174,6 +174,8 @@ class AnalyseCommand(BaseCommand):
         keyframe_files = self._get_keyframes_list(
             model_name, video_id, do_overwrite
         )
+        if len(keyframe_files) == 0:
+            return 1
         features_dir = self._work_dir / f"features" / video_id
 
         features = model.get_image_features(

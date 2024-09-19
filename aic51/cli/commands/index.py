@@ -110,24 +110,21 @@ class IndexCommand(BaseCommand):
             data = {
                 "frame_id": f"{video_id}#{frame_id}",  # This is because Milvus does not allow composite primary key
             }
-            for feature_type_path in frame_path.glob("*"):
-                if not feature_type_path.is_dir():
+            for feature_path in frame_path.glob("*"):
+                if feature_path.is_dir():
                     continue
-                feature_type = feature_type_path.stem
-
-                for feature_path in feature_type_path.glob("*"):
-                    if feature_path.suffix == ".npy":
-                        feature = np.load(feature_path)
-                    elif feature_path.suffix == ".txt":
-                        with open(feature_path, "r") as f:
-                            feature = f.read()
-                            feature = feature.lower()
-                    else:
-                        continue
-                    data = {
-                        **data,
-                        f"{feature_type.lower()}": feature,
-                    }
+                if feature_path.suffix == ".npy":
+                    feature = np.load(feature_path)
+                elif feature_path.suffix == ".txt":
+                    with open(feature_path, "r") as f:
+                        feature = f.read()
+                        feature = feature.lower()
+                else:
+                    continue
+                data = {
+                    **data,
+                    f"{feature_path.stem}": feature,
+                }
             data_list.append(data)
 
         database.insert(data_list, do_update)
