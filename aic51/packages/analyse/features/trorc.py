@@ -16,18 +16,21 @@ class TrOCR(FeatureExtractor):
         image_paths = [str(x) for x in image_paths]
         num_batches = ceil(len(image_paths) / batch_size)
         callback(0, num_batches, None)
-        for i in range(num_batches):
+        for j in range(num_batches):
             results = self._reader.readtext_batched(
-                image_paths[i * batch_size : (i + 1) * batch_size],
+                image_paths[j * batch_size : (j + 1) * batch_size],
                 n_width=640,
                 n_height=360,
             )
             for res in results:
-                detected_texts = []
-                for text in res:
-                    detected_texts.append(text[-2])
-                image_features.append(". ".join(detected_texts))
-            callback(i + 1, num_batches, image_features)
+                detected_texts = [list(x) for x in res]
+                for i, x in enumerate(detected_texts):
+                    for j in range(4):
+                        detected_texts[i][0][j] = [int(x[0][j][0]) / 640, int(x[0][j][1]) / 360]
+                    detected_texts[i][-1] = float(x[-1])
+                    
+                image_features.append(detected_texts)
+            callback(j + 1, num_batches, image_features)
 
         return image_features
 

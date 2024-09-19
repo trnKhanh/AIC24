@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import json
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -119,6 +120,11 @@ class IndexCommand(BaseCommand):
                     with open(feature_path, "r") as f:
                         feature = f.read()
                         feature = feature.lower()
+                elif feature_path.suffix == ".json":
+                    with open(feature_path, "r") as f:
+                        data = json.load(f)
+                    texts = [x[-2].lower() for x in data]
+                    feature = ". ".join(texts)
                 else:
                     continue
                 data = {

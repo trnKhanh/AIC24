@@ -1,5 +1,5 @@
 import os
-import math
+import json
 from pathlib import Path
 import shutil
 from concurrent.futures import ThreadPoolExecutor
@@ -155,7 +155,11 @@ class AnalyseCommand(BaseCommand):
 
         keyframes = []
         for keyframe in keyframes_dir.glob("*"):
-            if keyframe.is_dir() or keyframe.stem in has_features:
+            if (
+                keyframe.is_dir()
+                or keyframe.stem[0] == "."
+                or keyframe.stem in has_features
+            ):
                 continue
             keyframes.append(keyframe)
 
@@ -203,6 +207,9 @@ class AnalyseCommand(BaseCommand):
             elif isinstance(features[i], str):
                 with open(save_dir / f"{model_name}.txt", "w") as f:
                     f.write(features[i])
+            else:
+                with open(save_dir / f"{model_name}.json", "w") as f:
+                    json.dump(features[i], f)
             update_progress(advance=1)
 
         return 1
