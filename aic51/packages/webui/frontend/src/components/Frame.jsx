@@ -18,7 +18,7 @@ export function FrameItem({
         "bg-white hover:bg-gray-300": !selected,
         "bg-green-500": selected,
       })}
-      onClick={onSelect}
+      onDoubleClick={onSelect}
     >
       <img src={thumbnail} draggable="false" />
       <div

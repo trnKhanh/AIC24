@@ -9,35 +9,51 @@ import { useEffect, useState } from "react";
 import { search } from "../services/search.js";
 import { FrameItem, FrameContainer } from "../components/Frame.jsx";
 import { usePlayVideo } from "../components/VideoPlayer.jsx";
-import { Dropdown } from "../components/Filter.jsx";
+import { Dropdown, Editable } from "../components/Filter.jsx";
 import PreviousButton from "../assets/previous-btn.svg";
 import NextButton from "../assets/next-btn.svg";
 import HomeButton from "../assets/home-btn.svg";
 
-import { nlist, limitOptions, nprobeOption } from "../resources/options.js";
+import {
+  nlist,
+  limitOptions,
+  nprobeOption,
+  temporal_k_default,
+  ocr_weight_default,
+  max_interval_default,
+} from "../resources/options.js";
 
 export async function loader({ request }) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
 
   const q = searchParams.get("q");
-  const offset = searchParams.get("offset") || 0;
+  const _offset = searchParams.get("offset") || 0;
+  const selected = searchParams.get("selected") || undefined;
   const limit = searchParams.get("limit") || limitOptions[0];
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
   const model = searchParams.get("model") || undefined;
+  const temporal_k = searchParams.get("temporal_k") || temporal_k_default;
+  const ocr_weight = searchParams.get("ocr_weight") || ocr_weight_default;
+  const max_interval = searchParams.get("max_interval") || max_interval_default;
 
-  const { total, frames, params } = await search(
+  const { total, frames, params, offset } = await search(
     q,
-    offset,
+    _offset,
     limit,
     nprobe,
     model,
+    temporal_k,
+    ocr_weight,
+    max_interval,
+    selected,
   );
   const query = q ? { q } : {};
 
   return {
     query,
     params,
+    selected,
     offset,
     data: { total, frames },
   };
@@ -46,7 +62,7 @@ export async function loader({ request }) {
 export default function Search() {
   const { modelOptions } = useOutletContext();
   const submit = useSubmit();
-  const { query, params, offset, data } = useLoaderData();
+  const { query, params, offset, data, selected } = useLoaderData();
   const playVideo = usePlayVideo();
   const [selectedFrame, setSelectedFrame] = useState(null);
 
@@ -60,6 +76,8 @@ export default function Search() {
     // Set correct values
     document.querySelector("#search-bar").value = q || "";
     document.querySelector("#search-bar").focus();
+
+    document.title = q
   }, [q]);
 
   for (const [k, v] of Object.entries(params)) {
@@ -89,6 +107,7 @@ export default function Search() {
     };
   }, []);
   useEffect(() => {
+    document.title = q + `(${Math.floor(offset / limit) + 1})`
     const handleKeyDown = (e) => {
       switch (e.keyCode) {
         case 38:
@@ -140,6 +159,14 @@ export default function Search() {
 
   const handleOnSelect = (frame) => {
     setSelectedFrame(frame.id);
+    submit(
+      {
+        q: "video:" + frame.video_id,
+        ...params,
+        selected: frame.id,
+      },
+      { action: "/search" },
+    );
   };
   const handleOnChangeParams = (e) => {
     e.preventDefault();
@@ -151,6 +178,7 @@ export default function Search() {
     submit({
       ...query,
       ...data,
+      selected,
     });
   };
   const handleOnSearch = (e) => {
@@ -169,35 +197,48 @@ export default function Search() {
       { action: "/search" },
     );
   };
+  console.log(frames);
 
   return (
     <div id="search-area" className="flex flex-col w-full">
-      <Form onSubmit={handleOnChangeParams}>
-        <div className="py-2 px-5 self-stretch text-md justify-start items-center flex flex-row space-x-2">
+      <Form className="flex flex-col" onSubmit={handleOnChangeParams}>
+        <div className="py-2 px-5 self-stretch text-md justify-start items-center flex flex-row flex-wrap space-x-2">
           <Dropdown name="nprobe" options={nprobeOption} />
           <Dropdown name="limit" options={limitOptions} />
           <Dropdown name="model" options={modelOptions} />
-          <input
-            className="h-fit text-md px-4 py-2 border-2 border-gray-500 rounded-xl bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-700"
-            type="submit"
-            value="Apply"
-          />
+          <Editable name="temporal_k" defaultValue={temporal_k_default} />
+          <Editable name="ocr_weight" defaultValue={ocr_weight_default} />
+          <Editable name="max_interval" defaultValue={max_interval_default} />
         </div>
+
+        <input
+          className="self-center h-fit text-md px-4 py-2 border-2 border-gray-500 rounded-xl bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-700"
+          type="submit"
+          value="Apply"
+        />
       </Form>
 
-      <Form onSubmit={handleOnSearch}>
+      <Form id="search-form" onSubmit={handleOnSearch}>
         <div className="flex flex-col p-1 px-5 space-y-2 bg-gray-100">
           <div className="flex flex-row space-x-5">
-            <input
+            <textarea
+              form="search-form"
               autoComplete="off"
               className="flex-grow text-lg p-2 border-2 rounded-xl border-gray-700 bg-gray-200 text-gray-500 focus:border-black focus:bg-white focus:text-black focus:outline-none"
+              name="q"
               id="search-bar"
               type="search"
               placeholder="Search"
-              name="q"
+              onKeyDown={(e) => {
+                // Bad practice
+                if (e.keyCode === 13 && e.shiftKey === false) {
+                  e.preventDefault();
+                  document.querySelector("#search-form input").click();
+                }
+              }}
             />
             <input
-              className="text-lg py-1 px-4 border-2 rounded-xl bg-gray-700 text-white hover:bg-gray-500 active:bg-gray-400"
+              className="self-center text-lg py-1 px-4 border-2 rounded-xl bg-gray-700 text-white hover:bg-gray-500 active:bg-gray-400"
               type="submit"
               value="Search"
             />

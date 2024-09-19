@@ -100,13 +100,19 @@ function VideoPlayer({ frameInfo, onCancle }) {
         <div className="flex flex-row justify-between items-center">
           <div className="">
             <div className="">
-              <span className="font-bold">Video id</span>
+              <span className="font-bold">Video ID</span>
               {": "}
               {frameInfo.video_id}
             </div>
             <div className="">
               {" "}
-              <span className="font-bold">Frame id</span>
+              <span className="font-bold">Frame ID</span>
+              {": "}
+              {frameInfo.frame_id}
+            </div>
+            <div className="">
+              {" "}
+              <span className="font-bold">Frame Counter</span>
               {": "}
               {parseInt(frameCounter)}
             </div>

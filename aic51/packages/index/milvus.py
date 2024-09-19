@@ -10,6 +10,7 @@ from ...config import GlobalConfig
 
 
 class MilvusDatabase(object):
+    SEARCH_LIMIT = 10000
     DATATYPE_MAP = {
         "BOOL": DataType.BOOL,
         "INT8": DataType.INT8,
@@ -73,6 +74,7 @@ class MilvusDatabase(object):
         return res
 
     def query(self, filter, offset=0, limit=50):
+        limit = min(limit, self.SEARCH_LIMIT)
         res = self._client.query(
             self._collection_name,
             filter=filter,
@@ -90,6 +92,7 @@ class MilvusDatabase(object):
         nprobe=8,
         feature="clip",
     ):
+        limit = min(limit, self.SEARCH_LIMIT)
         search_params = {
             "metric_type": "COSINE",
             "params": {

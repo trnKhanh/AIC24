@@ -2,7 +2,20 @@ import axios from "axios";
 
 const PORT = import.meta.env.VITE_PORT || 5000;
 
-export async function search(q, offset, limit, nprobe, model) {
+export async function search(
+  q,
+  offset,
+  limit,
+  nprobe,
+  model,
+  temporal_k,
+  ocr_weight,
+  max_interval,
+  selected,
+) {
+  console.log("temporal_k", temporal_k)
+  console.log("ocr_weight", ocr_weight)
+  console.log("max_interval", max_interval)
   const res = await axios.get(`http://127.0.0.1:${PORT}/api/search`, {
     params: {
       q: q,
@@ -10,6 +23,10 @@ export async function search(q, offset, limit, nprobe, model) {
       limit: limit,
       nprobe: nprobe,
       model: model,
+      temporal_k: temporal_k,
+      ocr_weight: ocr_weight,
+      max_interval: max_interval,
+      selected: selected,
     },
   });
   const data = res.data;

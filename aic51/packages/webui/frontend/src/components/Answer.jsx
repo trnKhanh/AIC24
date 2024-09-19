@@ -342,6 +342,9 @@ export default function AnswerSidebar({}) {
                 placeholder="n"
                 autoComplete="off"
                 value={downloadN}
+                onChange={(e) => {
+                  setDownloadN(e.target.value);
+                }}
                 className="basis-1/4 py-1 px-2 mr-3 min-w-0 focus:outline-none"
               />
               <label htmlFor="step" className="mr-1 font-bold text-black">
@@ -354,6 +357,9 @@ export default function AnswerSidebar({}) {
                 placeholder="step"
                 autoComplete="off"
                 value={downloadStep}
+                onChange={(e) => {
+                  setDownloadStep(e.target.value);
+                }}
                 className="basis-1/4 py-1 px-2 min-w-0 focus:outline-none"
               />
             </div>
