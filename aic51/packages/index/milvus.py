@@ -1,6 +1,9 @@
 import logging
+import re
+import hashlib
 import subprocess
 from pathlib import Path
+from thefuzz import fuzz
 
 from pymilvus import DataType, MilvusClient
 from ...config import GlobalConfig
@@ -69,8 +72,23 @@ class MilvusDatabase(object):
         res = self._client.get(self._collection_name, ids=[id])
         return res
 
+    def query(self, filter, offset=0, limit=50):
+        res = self._client.query(
+            self._collection_name,
+            filter=filter,
+            offset=offset,
+            limit=limit,
+        )
+        return res
+
     def search(
-        self, query, filter="", offset=0, limit=50, nprobe=8, feature="clip"
+        self,
+        query,
+        filter="",
+        offset=0,
+        limit=50,
+        nprobe=8,
+        feature="clip",
     ):
         search_params = {
             "metric_type": "COSINE",
@@ -80,21 +98,15 @@ class MilvusDatabase(object):
         }
         res = self._client.search(
             self._collection_name,
-            data=[query],
-            anns_field=f"feature_{feature}",
+            data=query,
+            anns_field=f"{feature}",
             filter=filter,
             offset=offset,
             limit=limit,
             search_params=search_params,
-            output_fields=["frame_id"],
+            output_fields=["*"],
         )
         return res
-
-    def upsert(self):
-        pass
-
-    def delete(self):
-        pass
 
     def get_total(self):
         stats = self._client.get_collection_stats(self._collection_name)

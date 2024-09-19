@@ -1,35 +1,12 @@
-import logging
-
 from transformers import CLIPModel, CLIPProcessor
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import torch
-from PIL import Image
 
 from ....config import GlobalConfig
+from .feature_extractor import FeatureExtractor, ImageDataset
 
 
-class ImageDataset(Dataset):
-    def __init__(self, image_paths, processor):
-        self._image_paths = image_paths
-        self._processor = processor
-
-    def __len__(self):
-        return len(self._image_paths)
-
-    def __getitem__(self, index):
-        path = self._image_paths[index]
-        logging.getLogger("PIL").setLevel(logging.ERROR)
-        image = Image.open(path)
-
-        processed_data = self._processor(images=[image], return_tensors="pt")
-        processed_data["pixel_values"] = processed_data["pixel_values"].squeeze(
-            0
-        )
-
-        return processed_data
-
-
-class CLIP(object):
+class CLIP(FeatureExtractor):
     def __init__(self, pretrained_model):
         self._model = CLIPModel.from_pretrained(pretrained_model)
         self._processor = CLIPProcessor.from_pretrained(pretrained_model)
@@ -66,7 +43,7 @@ class CLIP(object):
         return image_features
 
     def get_text_features(self, texts):
-        tokenized_input = self._processor(text=texts, return_tensors="pt")
+        tokenized_input = self._processor(text=texts, return_tensors="pt", padding=True)
 
         text_features = self._model.get_text_features(**tokenized_input)
 

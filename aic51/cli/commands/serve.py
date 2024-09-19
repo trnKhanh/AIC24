@@ -105,14 +105,14 @@ class ServeCommand(BaseCommand):
             cwd=str(Path(__file__).parent / "../../packages/webui/frontend"),
         )
         built_dir = Path(__file__).parent / "../../packages/webui/frontend/dist"
+        public_dir = (
+            Path(__file__).parent / "../../packages/webui/frontend/public"
+        )
 
-        dist_dir = self._work_dir / ".dist"
-        if dist_dir.exists():
-            shutil.rmtree(dist_dir)
-        dist_dir.mkdir(parents=True, exist_ok=True)
+        web_dir = self._work_dir / ".web"
 
-        for file in built_dir.glob("**/*"):
-            shutil.move(
-                file,
-                dist_dir,
-            )
+        if web_dir.exists():
+            shutil.rmtree(web_dir)
+        web_dir.mkdir(parents=True, exist_ok=True)
+
+        built_dir.rename(web_dir / "dist")

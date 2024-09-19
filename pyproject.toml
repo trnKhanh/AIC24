@@ -21,6 +21,8 @@ dependencies = [
   "pymilvus==2.4.6",
   "fastapi",
   "uvicorn",
+  "easyocr",
+  "thefuzz",
 ]
 
 [project.scripts]
