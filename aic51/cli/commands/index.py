@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 import os
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -100,8 +101,28 @@ class IndexCommand(BaseCommand):
             for future in futures:
                 future.result()
 
+    def _extract_video_info(self, video_id):
+        video_path = self._work_dir / "videos" / f"{video_id}.mp4"
+        video_info_path = self._work_dir / "videos_info" / f"{video_id}.json"
+        video_info_path.parent.mkdir(exist_ok=True, parents=True)
+        ffprobe_cmd = ["ffprobe", "-v", "quiet", "-of", "compact=p=0"] + [
+            "-select_streams",
+            "0",
+            "-show_entries",
+            "stream=r_frame_rate",
+            str(video_path),
+        ]
+        res = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
+
+        fraction = str(res.stdout).split("=")[1].split("/")
+        frame_rate = round(int(fraction[0]) / int(fraction[1]))
+
+        with open(video_info_path, "w") as f:
+            json.dump(dict(frame_rate=frame_rate), f)
+
     def _index_features(self, database, video_id, do_update, update_progress):
         update_progress(description="Indexing...")
+        self._extract_video_info(video_id)
         features_dir = self._work_dir / "features" / video_id
         data_list = []
         for frame_path in features_dir.glob("*/"):
@@ -122,9 +143,7 @@ class IndexCommand(BaseCommand):
                         feature = feature.lower()
                 elif feature_path.suffix == ".json":
                     with open(feature_path, "r") as f:
-                        data = json.load(f)
-                    texts = [x[-2].lower() for x in data]
-                    feature = ". ".join(texts)
+                        feature = json.load(f)
                 else:
                     continue
                 data = {

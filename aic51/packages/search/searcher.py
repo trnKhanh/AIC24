@@ -1,4 +1,5 @@
 import re
+import time
 from copy import deepcopy
 import logging
 import hashlib
@@ -27,6 +28,9 @@ class Searcher(object):
             self._logger.error(
                 f'No models found in "{GlobalConfig.CONFIG_FILE}". Check your "{GlobalConfig.CONFIG_FILE}"'
             )
+
+    def get(self, id):
+        return self._database.get(id)
 
     def get_models(self):
         return list(self._models.keys())
@@ -63,18 +67,38 @@ class Searcher(object):
             processed["advance"].append({})
 
             if len(ocr) > 0:
-                processed["advance"][-1]["ocr"] = " ".join(ocr)
+                processed["advance"][-1]["ocr"] = ocr
         return processed
 
-    def _process_advance(self, advance_query, result, ocr_weight):
+    def _process_advance(
+        self, advance_query, result, ocr_weight, ocr_threshold
+    ):
         if "ocr" not in advance_query:
             return result
         query_ocr = advance_query["ocr"]
         res = deepcopy(result)
-
         for i, record in enumerate(result):
-            ocr = record["entity"]["ocr"] if "ocr" in record["entity"] else ""
-            ocr_distance = fuzz.partial_ratio(query_ocr, ocr) / 100
+            ocr_distance = 0
+            for query_text in query_ocr:
+                ocr = (
+                    record["entity"]["ocr"] if "ocr" in record["entity"] else []
+                )
+                ocr_text_distance = 0
+                cnt = 0
+                for text in ocr:
+                    partial_ratio = fuzz.partial_ratio(
+                        query_text.lower(), text[-2].lower()
+                    )
+                    if partial_ratio > ocr_threshold:
+                        cnt += 1
+                        ocr_text_distance += partial_ratio / 100
+
+                if cnt > 0:
+                    ocr_text_distance /= cnt
+                ocr_distance += ocr_text_distance
+
+            if len(query_ocr) > 0:
+                ocr_distance /= len(query_ocr)
 
             res[i]["distance"] = (
                 record["distance"] + ocr_distance * ocr_weight
@@ -130,9 +154,6 @@ class Searcher(object):
                         r += 1
 
                 for i in range(l, r):
-                    self._logger.debug(
-                        f"{cur['_id']} ({cur['distance']}) -> {best[i]['_id']} ({best[i]['distance']})"
-                    )
                     tmp.append(
                         {
                             **cur,
@@ -152,6 +173,143 @@ class Searcher(object):
 
         return best
 
+    def _simple_search(self, processed, filter, offset, limit, nprobe, model):
+        text_features = (
+            self._models[model].get_text_features(processed["queries"]).tolist()
+        )
+        filter = self._combine_videos_filter(filter, processed["video_ids"])
+
+        results = self._database.search(
+            text_features,
+            filter,
+            offset,
+            limit,
+            nprobe,
+            model,
+        )[0]
+        res = {
+            "results": results,
+            "total": self._database.get_total(),
+            "offset": offset,
+        }
+        return res
+
+    def _combine_videos_filter(self, filter, video_ids):
+        video_ids_fitler = " || ".join(
+            [f'frame_id like "{x.strip()}#%"' for x in video_ids]
+        )
+        filter_empty = len(filter) == 0
+        if len(video_ids) > 0:
+            video_ids_fitler = "(" + video_ids_fitler + ")"
+            if not filter_empty:
+                video_ids_fitler = f"{filter} && {video_ids_fitler}"
+        return video_ids_fitler
+
+    def _complex_search(
+        self,
+        processed,
+        filter,
+        offset,
+        limit,
+        nprobe,
+        model,
+        temporal_k,
+        ocr_weight,
+        ocr_threshold,
+        max_interval,
+    ):
+        params = {
+            "filter": filter,
+            "nprobe": nprobe,
+            "model": model,
+            "temporal_k": temporal_k,
+            "ocr_weight": ocr_weight,
+            "ocr_threshold": ocr_threshold,
+            "max_interval": max_interval,
+        }
+        self._logger.debug(processed)
+        self._logger.debug(params)
+        query_hash = hashlib.sha256(
+            (f"complex:{repr(processed)}{repr(params)}").encode("utf-8")
+        ).hexdigest()
+        if query_hash in self.cache:
+            combined_results = self.cache[query_hash]
+        else:
+            text_features = (
+                self._models[model]
+                .get_text_features(processed["queries"])
+                .tolist()
+            )
+            filter = self._combine_videos_filter(filter, processed["video_ids"])
+
+            st = time.time()
+            results = self._database.search(
+                text_features,
+                filter,
+                0,
+                temporal_k,
+                nprobe,
+                model,
+            )
+            en = time.time()
+            self._logger.debug(f"{en-st:.4f} seconds to search results")
+            for i in range(len(processed["queries"])):
+                results[i] = self._process_advance(
+                    processed["advance"][i],
+                    results[i],
+                    ocr_weight,
+                    ocr_threshold,
+                )
+
+            st = time.time()
+            combined_results = self._combine_temporal_results(
+                results, temporal_k, max_interval
+            )
+            en = time.time()
+            self._logger.debug(f"{en-st:.4f} seconds to combine results")
+            self.cache[query_hash] = combined_results
+        if combined_results is not None and offset < len(combined_results):
+            results = combined_results[offset : offset + limit]
+        else:
+            results = []
+
+        res = {
+            "results": results,
+            "total": len(combined_results or []),
+            "offset": offset,
+        }
+        return res
+
+    def _get_videos(self, video_ids, offset, limit, selected):
+        query_hash = hashlib.sha256(
+            (f"video:{repr(video_ids)}").encode("utf-8")
+        ).hexdigest()
+
+        if query_hash in self.cache:
+            videos = self.cache[query_hash]
+        elif len(video_ids) == 0:
+            videos = []
+        else:
+            video_ids_fitler = " || ".join(
+                [f'frame_id like "{x.strip()}#%"' for x in video_ids]
+            )
+            videos = self._database.query(video_ids_fitler, 0, 10000)
+            videos = sorted(videos, key=lambda x: x["frame_id"])
+            videos = [{"entity": x} for x in videos]
+            self.cache[query_hash] = videos
+
+        if selected:
+            for i, video in enumerate(videos):
+                if selected == video["entity"]["frame_id"]:
+                    offset = (i // limit) * limit
+                    break
+        res = {
+            "results": videos[offset : offset + limit],
+            "total": len(videos),
+            "offset": offset,
+        }
+        return res
+
     def search(
         self,
         q: str,
@@ -161,107 +319,39 @@ class Searcher(object):
         nprobe: int = 8,
         model: str = "clip",
         temporal_k: int = 10000,
-        ocr_weight: float = 1,
+        ocr_weight: float = 1.0,
+        ocr_threshold: int = 40,
         max_interval: int = 250,
         selected: str | None = None,
     ):
-        query_hash = hashlib.sha256(
-            (
-                q
-                + f"nprobe:{nprobe} model:{model} temporal_k:{temporal_k} ocr_weight:{ocr_weight} max_interval:{max_interval}"
-            ).encode("utf-8")
-        ).hexdigest()
-        self._logger.debug(
-            (
-                q
-                + f" nprobe:{nprobe} model:{model} temporal_k:{temporal_k} ocr_weight:{ocr_weight} max_interval:{max_interval}"
+        processed = self._process_query(q)
+        no_query = all([len(x) == 0 for x in processed["queries"]])
+        no_advance = all([len(x) == 0 for x in processed["advance"]])
+
+        if no_query and no_advance:
+            self._logger.debug(f"Get videos: {q}")
+            return self._get_videos(
+                processed["video_ids"], offset, limit, selected
             )
-        )
-        if query_hash in self.cache:
-            combined_results = self.cache[query_hash]
+        elif len(processed["queries"]) == 1 and no_advance:
+            self._logger.debug(f"Simple search: {q}")
+            return self._simple_search(
+                processed, filter, offset, limit, nprobe, model
+            )
         else:
-            processed = self._process_query(q)
-            self._logger.debug(f"temporal_k: {temporal_k}")
-            self._logger.debug(processed)
-            if all([len(query) == 0 for query in processed["queries"]]) and all(
-                [len(a) == 0 for a in processed["advance"]]
-            ):
-                combined_results = self.get_videos(processed["video_ids"])
-            else:
-
-                text_features = self._models[model].get_text_features(
-                    processed["queries"]
-                )
-                text_features = text_features.tolist()
-
-                video_ids_fitler = " || ".join(
-                    [
-                        f'frame_id like "{x.strip()}#%"'
-                        for x in processed["video_ids"]
-                    ]
-                )
-                filter_empty = len(filter) == 0
-                if len(processed["video_ids"]) > 0:
-                    video_ids_fitler = "(" + video_ids_fitler + ")"
-                    if not filter_empty:
-                        video_ids_fitler = " && " + video_ids_fitler
-                import time
-
-                st = time.time()
-
-                results = self._database.search(
-                    text_features,
-                    filter + video_ids_fitler,
-                    0,
-                    temporal_k,
-                    nprobe,
-                    model,
-                )
-                en = time.time()
-                self._logger.debug(f"{en-st} seconds to search results")
-                for i in range(len(processed["queries"])):
-                    results[i] = self._process_advance(
-                        processed["advance"][i], results[i], ocr_weight
-                    )
-
-                st = time.time()
-                combined_results = self._combine_temporal_results(
-                    results, temporal_k, max_interval
-                )
-                en = time.time()
-                self._logger.debug(f"{en-st} seconds to combine results")
-            self.cache[query_hash] = combined_results
-
-        if combined_results is None:
-            res = {
-                "results": [],
-                "total": 0,
-                "offset": 0,
-            }
-        else:
-            if selected:
-                print(selected)
-                for i, res in enumerate(combined_results):
-                    if selected == res["entity"]["frame_id"]:
-                        offset = (i // limit) * limit
-                        break
-            res = {
-                "results": combined_results[offset : offset + limit],
-                "total": len(combined_results),
-                "offset": offset,
-            }
-        return res
-
-    def get_videos(self, video_ids):
-        if len(video_ids) == 0:
-            return []
-        video_ids_fitler = " || ".join(
-            [f'frame_id like "{x.strip()}#%"' for x in video_ids]
-        )
-        res = self._database.query(video_ids_fitler, 0, 10000)
-        res = sorted(res, key=lambda x: x["frame_id"])
-        res = [{"entity": x} for x in res]
-        return res
+            self._logger.debug(f"Complex search: {q}")
+            return self._complex_search(
+                processed,
+                filter,
+                offset,
+                limit,
+                nprobe,
+                model,
+                temporal_k,
+                ocr_weight,
+                ocr_threshold,
+                max_interval,
+            )
 
     def search_similar(
         self,

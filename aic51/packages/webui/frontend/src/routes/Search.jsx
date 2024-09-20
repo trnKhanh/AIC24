@@ -3,7 +3,9 @@ import {
   Form,
   useSubmit,
   useOutletContext,
+  useNavigation,
 } from "react-router-dom";
+import classNames from "classnames";
 import { useEffect, useState } from "react";
 
 import { search } from "../services/search.js";
@@ -13,6 +15,7 @@ import { Dropdown, Editable } from "../components/Filter.jsx";
 import PreviousButton from "../assets/previous-btn.svg";
 import NextButton from "../assets/next-btn.svg";
 import HomeButton from "../assets/home-btn.svg";
+import SpinIcon from "../assets/spin.svg";
 
 import {
   nlist,
@@ -20,6 +23,7 @@ import {
   nprobeOption,
   temporal_k_default,
   ocr_weight_default,
+  ocr_threshold_default,
   max_interval_default,
 } from "../resources/options.js";
 
@@ -35,6 +39,8 @@ export async function loader({ request }) {
   const model = searchParams.get("model") || undefined;
   const temporal_k = searchParams.get("temporal_k") || temporal_k_default;
   const ocr_weight = searchParams.get("ocr_weight") || ocr_weight_default;
+  const ocr_threshold =
+    searchParams.get("ocr_threshold") || ocr_threshold_default;
   const max_interval = searchParams.get("max_interval") || max_interval_default;
 
   const { total, frames, params, offset } = await search(
@@ -45,6 +51,7 @@ export async function loader({ request }) {
     model,
     temporal_k,
     ocr_weight,
+    ocr_threshold,
     max_interval,
     selected,
   );
@@ -60,9 +67,11 @@ export async function loader({ request }) {
 }
 
 export default function Search() {
+  const navigation = useNavigation();
   const { modelOptions } = useOutletContext();
   const submit = useSubmit();
   const { query, params, offset, data, selected } = useLoaderData();
+  console.log(params);
   const playVideo = usePlayVideo();
   const [selectedFrame, setSelectedFrame] = useState(null);
 
@@ -77,7 +86,7 @@ export default function Search() {
     document.querySelector("#search-bar").value = q || "";
     document.querySelector("#search-bar").focus();
 
-    document.title = q
+    document.title = q;
   }, [q]);
 
   for (const [k, v] of Object.entries(params)) {
@@ -107,7 +116,7 @@ export default function Search() {
     };
   }, []);
   useEffect(() => {
-    document.title = q + `(${Math.floor(offset / limit) + 1})`
+    document.title = q + `(${Math.floor(offset / limit) + 1})`;
     const handleKeyDown = (e) => {
       switch (e.keyCode) {
         case 38:
@@ -175,11 +184,18 @@ export default function Search() {
     for (const [k, v] of formData.entries()) {
       data[k] = v;
     }
-    submit({
-      ...query,
-      ...data,
-      selected,
-    });
+    if (selected) {
+      submit({
+        ...query,
+        ...data,
+        selected,
+      });
+    } else {
+      submit({
+        ...query,
+        ...data,
+      });
+    }
   };
   const handleOnSearch = (e) => {
     e.preventDefault();
@@ -202,12 +218,13 @@ export default function Search() {
   return (
     <div id="search-area" className="flex flex-col w-full">
       <Form className="flex flex-col" onSubmit={handleOnChangeParams}>
-        <div className="py-2 px-5 self-stretch text-md justify-start items-center flex flex-row flex-wrap space-x-2">
+        <div className="py-2 px-5 self-stretch text-md justify-start items-center flex flex-row flex-wrap">
           <Dropdown name="nprobe" options={nprobeOption} />
           <Dropdown name="limit" options={limitOptions} />
           <Dropdown name="model" options={modelOptions} />
           <Editable name="temporal_k" defaultValue={temporal_k_default} />
           <Editable name="ocr_weight" defaultValue={ocr_weight_default} />
+          <Editable name="ocr_threshold" defaultValue={ocr_threshold_default} />
           <Editable name="max_interval" defaultValue={max_interval_default} />
         </div>
 
@@ -221,6 +238,13 @@ export default function Search() {
       <Form id="search-form" onSubmit={handleOnSearch}>
         <div className="flex flex-col p-1 px-5 space-y-2 bg-gray-100">
           <div className="flex flex-row space-x-5">
+            <img
+              className={classNames("h-8 w-8 self-center", {
+                "visible animate-spin": navigation.state === "loading",
+                invisible: navigation.state !== "loading",
+              })}
+              src={SpinIcon}
+            />
             <textarea
               form="search-form"
               autoComplete="off"
@@ -285,26 +309,32 @@ export default function Search() {
           END
         </div>
       ) : (
-        <FrameContainer id="result">
-          {frames.map((frame) => (
-            <FrameItem
-              key={frame.id}
-              video_id={frame.video_id}
-              frame_id={frame.frame_id}
-              thumbnail={frame.frame_uri}
-              onPlay={() => {
-                handleOnPlay(frame);
-              }}
-              onSearchSimilar={() => {
-                handleOnSearchSimilar(frame);
-              }}
-              onSelect={() => {
-                handleOnSelect(frame);
-              }}
-              selected={selectedFrame === frame.id}
-            />
-          ))}
-        </FrameContainer>
+        <div
+          className={classNames("", {
+            "animate-pulse": navigation.state === "loading",
+          })}
+        >
+          <FrameContainer id="result">
+            {frames.map((frame) => (
+              <FrameItem
+                key={frame.id}
+                video_id={frame.video_id}
+                frame_id={frame.frame_id}
+                thumbnail={frame.frame_uri}
+                onPlay={() => {
+                  handleOnPlay(frame);
+                }}
+                onSearchSimilar={() => {
+                  handleOnSearchSimilar(frame);
+                }}
+                onSelect={() => {
+                  handleOnSelect(frame);
+                }}
+                selected={selectedFrame === frame.id}
+              />
+            ))}
+          </FrameContainer>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import os
-import sys
+import json
 import logging
 from pathlib import Path
 
@@ -41,6 +41,7 @@ async def search(
     nprobe: int = 8,
     temporal_k: int = 10000,
     ocr_weight: float = 1.0,
+    ocr_threshold: int = 40,
     max_interval: int = 250,
     selected: str | None = None,
 ):
@@ -53,6 +54,7 @@ async def search(
         model,
         temporal_k,
         ocr_weight,
+        ocr_threshold,
         max_interval,
         selected,
     )
@@ -65,6 +67,12 @@ async def search(
             f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
         )
         video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
+        try:
+            with open(WORK_DIR / "videos_info" / f"{video_id}.json", "r") as f:
+                fps = json.load(f)["frame_rate"]
+        except:
+            fps = 25
+
         frames.append(
             dict(
                 id=video_frame_str,
@@ -72,6 +80,7 @@ async def search(
                 frame_id=frame_id,
                 frame_uri=frame_uri,
                 video_uri=video_uri,
+                fps=fps,
             )
         )
 
@@ -81,6 +90,7 @@ async def search(
         "nprobe": nprobe,
         "temporal_k": temporal_k,
         "ocr_weight": ocr_weight,
+        "ocr_threshold": ocr_threshold,
         "max_interval": max_interval,
     }
     return {
@@ -101,6 +111,7 @@ async def similar(
     nprobe: int = 8,
     temporal_k: int = 10000,
     ocr_weight: float = 1.0,
+    ocr_threshold: int = 40,
     max_interval: int = 250,
 ):
     res = searcher.search_similar(id, offset, limit, nprobe, model)
@@ -113,6 +124,12 @@ async def similar(
             f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
         )
         video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
+        try:
+            with open(WORK_DIR / "videos_info" / f"{video_id}.json", "r") as f:
+                fps = json.load(f)["frame_rate"]
+        except:
+            fps = 25
+
         frames.append(
             dict(
                 id=video_frame_str,
@@ -120,6 +137,7 @@ async def similar(
                 frame_id=frame_id,
                 frame_uri=frame_uri,
                 video_uri=video_uri,
+                fps=fps,
             )
         )
 
@@ -129,6 +147,7 @@ async def similar(
         "nprobe": nprobe,
         "temporal_k": temporal_k,
         "ocr_weight": ocr_weight,
+        "ocr_threshold": ocr_threshold,
         "max_interval": max_interval,
     }
     return {
@@ -139,56 +158,27 @@ async def similar(
     }
 
 
-#
-#
-# @app.get("/api/video/{video_id}")
-# async def similar(
-#     request: Request,
-#     video_id: str,
-#     frame_id: str = "",
-# ):
-#     res = database.query(video_id)
-#     frames = []
-#     id = -1
-#     for record in res["results"]:
-#         data = record["entity"]
-#         video_frame_str = data["frame_id"]
-#         _video_id, _frame_id = video_frame_str.split("#")
-#         frame_uri = (
-#             f"{request.base_url}api/files/keyframes/{_video_id}/{_frame_id}.jpg"
-#         )
-#         video_uri = f"{request.base_url}api/stream/videos/{_video_id}.mp4"
-#         frames.append(
-#             dict(
-#                 id=video_frame_str,
-#                 video_id=_video_id,
-#                 frame_id=_frame_id,
-#                 frame_uri=frame_uri,
-#                 video_uri=video_uri,
-#             )
-#         )
-#     frames = sorted(frames, key=lambda x: x["frame_id"])
-#     for i, frame in enumerate(frames):
-#         if frame["frame_id"] == frame_id:
-#             id = i
-#     return {"total": database.get_total(), "frames": frames, "id": id}
-#
-#
-# @app.get("/api/frame_info")
-# async def frame_info(request: Request, video_id: str, frame_id: str):
-#     id = f"{video_id}#{frame_id}"
-#     record = database.get(id)
-#     frame_uri = (
-#         f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
-#     )
-#     video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
-#     return dict(
-#         id=id if len(record) > 0 else None,
-#         video_id=video_id,
-#         frame_id=frame_id,
-#         frame_uri=frame_uri if len(record) > 0 else None,
-#         video_uri=video_uri,
-#     )
+@app.get("/api/frame_info")
+async def frame_info(request: Request, video_id: str, frame_id: str):
+    id = f"{video_id}#{frame_id}"
+    record = searcher.get(id)
+    frame_uri = (
+        f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
+    )
+    video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
+    try:
+        with open(WORK_DIR / "videos_info" / f"{video_id}.json", "r") as f:
+            fps = json.load(f)["frame_rate"]
+    except:
+        fps = 25
+    return dict(
+        id=id if len(record) > 0 else None,
+        video_id=video_id,
+        frame_id=frame_id,
+        frame_uri=frame_uri if len(record) > 0 else None,
+        video_uri=video_uri,
+        fps=fps,
+    )
 
 
 @app.get("/api/files/{file_path:path}")

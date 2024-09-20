@@ -33,8 +33,9 @@ function VideoPlayer({ frameInfo, onCancle }) {
 
   useEffect(() => {
     const videoElement = document.querySelector("#playing-video");
+    const fps = frameInfo.fps
     videoElement.currentTime =
-      parseInt(frameInfo.frame_counter || frameInfo.frame_id) / 25 - 0.5;
+      parseInt(frameInfo.frame_counter || frameInfo.frame_id) / fps - 0.5;
     videoElement.focus();
 
     const handleKeyDown = (e) => {
@@ -76,7 +77,7 @@ function VideoPlayer({ frameInfo, onCancle }) {
 
     document.addEventListener("keydown", handleKeyDown);
     let id = setInterval(() => {
-      setFrameCounter(videoElement.currentTime * 25);
+      setFrameCounter(videoElement.currentTime * fps);
     }, 20);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
