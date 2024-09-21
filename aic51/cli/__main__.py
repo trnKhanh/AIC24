@@ -51,6 +51,8 @@ def main():
     command = args.pop("command")
 
     func = args.pop("func")
+    if not args.get("verbose"):
+        logging.disable(logging.CRITICAL)
 
     func(**args)
 

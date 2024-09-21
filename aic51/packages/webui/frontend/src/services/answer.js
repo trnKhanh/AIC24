@@ -50,9 +50,8 @@ export async function deleteAnswer(id) {
 }
 
 export function getCSV(answer, n, step) {
-  console.log(answer);
   let fileData = "";
-  let center = parseInt(answer.frame_counter);
+  let center = parseInt(answer.frame_id || answer.frame_counter);
 
   for (
     let offset = 0, i = 0, left = false;
@@ -67,7 +66,6 @@ export function getCSV(answer, n, step) {
       fileData += `${answer.video_id},${Math.round(curFrame)},${answer.answer}`;
     else fileData += `${answer.video_id},${Math.round(curFrame)}`;
   }
-  console.log(fileData);
 
   return fileData;
 }

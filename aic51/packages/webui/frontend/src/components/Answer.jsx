@@ -39,8 +39,8 @@ function AnswerItem({
       onSelect(answer);
     }
   };
-  const handleOnPlay = async () => {
-    const frameInfo = await getFrameInfo(answer.video_id, answer.frame_id);
+  const handleOnPlay = async (e) => {
+    const frameInfo = await getFrameInfo(answer.video_id, answer.frame_counter);
     frameInfo.frame_counter = answer.frame_counter;
     playVideo(frameInfo);
   };
@@ -51,7 +51,7 @@ function AnswerItem({
     }
     const currentParams = Object.fromEntries(searchParams);
     const filteredParams = Object.keys(currentParams)
-      .filter((k) => k !== "q")
+      .filter((k) => (k !== "q" && k != "offset"))
       .reduce((obj, key) => {
         obj[key] = currentParams[key];
         return obj;
@@ -164,7 +164,11 @@ function AnswerItem({
       <div id="answer-description">
         <div className="">{answer.query_id}</div>
       </div>
-      <div id="answer-option" className="flex flex-row">
+      <div
+        id="answer-option"
+        className="flex flex-row"
+        onClick={(e) => e.stopPropagation()}
+      >
         <img
           className="hover:bg-blue-100 active:bg-blue-50 select-none"
           src={EditButton}
@@ -287,7 +291,7 @@ export default function AnswerSidebar({}) {
   const fetcher = useFetcher({ key: "answers" });
   const [selected, setSelected] = useState(null);
   const [downloadStep, setDownloadStep] = useState(50);
-  const [downloadN, setDownloadN] = useState(50);
+  const [downloadN, setDownloadN] = useState(5);
   const [downloadList, setDownloadList] = useState([]);
   const playVideo = usePlayVideo();
 
@@ -306,10 +310,6 @@ export default function AnswerSidebar({}) {
     } else {
       setDownloadList([...downloadList, answer.id]);
     }
-  };
-  const handleOnPlay = async (answer) => {
-    const frameInfo = await getFrameInfo(answer.video_id, answer.frame_id);
-    playVideo(frameInfo);
   };
   const handleOnSingleDownload = async (a) => {
     const csvData = getCSV(a, downloadN, downloadStep);
@@ -346,6 +346,9 @@ export default function AnswerSidebar({}) {
                 placeholder="n"
                 autoComplete="off"
                 value={downloadN}
+                onChange={(e) => {
+                  setDownloadN(e.target.value);
+                }}
                 className="basis-1/4 py-1 px-2 mr-3 min-w-0 focus:outline-none"
               />
               <label htmlFor="step" className="mr-1 font-bold text-black">
@@ -358,6 +361,9 @@ export default function AnswerSidebar({}) {
                 placeholder="step"
                 autoComplete="off"
                 value={downloadStep}
+                onChange={(e) => {
+                  setDownloadStep(e.target.value);
+                }}
                 className="basis-1/4 py-1 px-2 min-w-0 focus:outline-none"
               />
             </div>

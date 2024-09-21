@@ -1,11 +1,13 @@
+max_workers_ratio: 1.0
 add:
-  max_scene_length: 25
+  max_scene_length: 50
 analyse:
   features: &analyse_features
-    # - name: "clip_l_14"
-    #   pretrained_model: "openai/clip-vit-large-patch14"
-    - name: "clip_b_16"
+    - name: "clip"
       pretrained_model: "openai/clip-vit-base-patch16"
+      batch_size: 16
+    - name: "ocr"
+      batch_size: 8
   num_workers: 1
   pin_memory: true
 
@@ -13,27 +15,18 @@ milvus:
   fields:
     - field_name: "frame_id"
       datatype: "VARCHAR"
-      max_length: 100
+      max_length: 32
       is_primary: true
-    # - field_name: "feature_clip_l_14"
-    #   datatype: "FLOAT_VECTOR"
-    #   dim: 768
-    - field_name: "feature_clip_b_16"
+    - field_name: "clip"
       datatype: "FLOAT_VECTOR"
       dim: 512
-    - field_name: "cluster_id"
-      datatype: "INT64"
+    - field_name: "ocr"
+      datatype: "JSON"
   indices:
-    # - field_name: "feature_clip_l_14"
-    #   metric_type: "COSINE"
-    #   index_type: "IVF_FLAT"
-    #   index_name: "clip_l_14_index"
-    #   params:
-    #     nlist: 128
-    - field_name: "feature_clip_b_16"
+    - field_name: "clip"
       metric_type: "COSINE"
       index_type: "IVF_FLAT"
-      index_name: "clip_b_16_index"
+      index_name: "clip_index"
       params:
         nlist: 128
 

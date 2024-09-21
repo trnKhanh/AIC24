@@ -1,5 +1,5 @@
 import os
-import math
+import json
 from pathlib import Path
 import shutil
 from concurrent.futures import ThreadPoolExecutor
@@ -9,7 +9,7 @@ import torch
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, TextColumn
 
 from .command import BaseCommand
-from ...packages.analyse.features import CLIP
+from ...packages.analyse.features import CLIP, TrOCR
 from ...config import GlobalConfig
 
 
@@ -22,13 +22,6 @@ class AnalyseCommand(BaseCommand):
             "analyse", help="Analyse extracted keyframes"
         )
 
-        parser.add_argument(
-            "-b",
-            "--batch-size",
-            dest="batch_size",
-            type=int,
-            default=1,
-        )
         parser.add_argument(
             "--no-gpu",
             dest="gpu",
@@ -45,27 +38,45 @@ class AnalyseCommand(BaseCommand):
 
         parser.set_defaults(func=self)
 
-    def __call__(self, batch_size, gpu, do_overwrite, verbose, *args, **kwargs):
+    def __call__(self, gpu, do_overwrite, verbose, *args, **kwargs):
         models = GlobalConfig.get("analyse", "features")
+        max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0
         if models is None:
             raise RuntimeError(
                 f"Models for features extraction are not specified. Check your config file."
             )
-        video_ids = self._init_features_dir(do_overwrite)
+        video_ids = self._get_video_ids()
 
-        for model in models:
-            model_name = model["name"]
-            pretrained_model = model["pretrained_model"]
-            clip = CLIP(pretrained_model)
-            self._logger.info(
-                f"Start extracting features using {model_name} ({pretrained_model})"
-            )
-            if gpu and torch.cuda.is_available():
-                device_count = 2
-                clip.to("cuda")
+        for model_info in models:
+            model_name = model_info["name"].lower()
+            batch_size = model_info["batch_size"]
+            if model_name == "clip":
+                pretrained_model = model_info["pretrained_model"]
+                model = CLIP(pretrained_model)
+                self._logger.info(
+                    f"Start extracting features using {model_name} ({pretrained_model})"
+                )
+            elif model_name == "ocr":
+                model = TrOCR()
+                self._logger.info(
+                    f"Start extracting features using {model_name} (easyOCR)"
+                )
             else:
-                device_count = os.cpu_count()
-                clip.to("cpu")
+                self._logger.error(f"{model_name}: model is not available")
+                continue
+
+            if gpu and torch.cuda.is_available():
+                max_workers = 1
+                model.to("cuda")
+            elif gpu and torch.backends.mps.is_available():
+                max_workers = 1
+                model.to("mps")
+            else:
+                max_workers = round((os.cpu_count() or 0) * max_workers_ratio)
+                if max_workers <= 0:
+                    max_workers = 1
+
+                model.to("cpu")
                 self._logger.warning(
                     "CUDA is not available, fallbacked to use CPU"
                 )
@@ -77,8 +88,9 @@ class AnalyseCommand(BaseCommand):
                     SpinnerColumn(),
                     *Progress.get_default_columns(),
                     TimeElapsedColumn(),
+                    disable=not verbose,
                 ) as progress,
-                ThreadPoolExecutor(int(device_count or 2) // 2) as executor,
+                ThreadPoolExecutor(max_workers) as executor,
             ):
 
                 def update_progress(task_id):
@@ -94,7 +106,7 @@ class AnalyseCommand(BaseCommand):
                     try:
                         status_ok = self._extract_features(
                             model_name,
-                            clip,
+                            model,
                             video_id,
                             batch_size,
                             do_overwrite,
@@ -108,9 +120,9 @@ class AnalyseCommand(BaseCommand):
                                 "Finished" if status_ok else "Skipped"
                             ),
                         )
+                        progress.remove_task(task_id)
                     except Exception as e:
                         progress.update(task_id, description=f"Error: {str(e)}")
-                    progress.remove_task(task_id)
 
                 futures = []
                 for video_id in video_ids:
@@ -118,60 +130,86 @@ class AnalyseCommand(BaseCommand):
                 for future in futures:
                     future.result()
 
-    def _init_features_dir(self, do_overwrite):
+    def _get_video_ids(self):
         keyframes_dir = self._work_dir / "keyframes"
-        features_dir = self._work_dir / "features"
-        video_paths = sorted(
-            [d for d in keyframes_dir.glob("*/") if d.is_dir()],
-            key=lambda path: path.stem,
+        video_ids = sorted(
+            [d.stem for d in keyframes_dir.glob("*") if d.is_dir()]
         )
-        video_ids = []
-        for video_path in video_paths:
-            video_features_dir = features_dir / video_path.stem
-            video_ids.append(video_path.stem)
-            video_features_dir.mkdir(parents=True, exist_ok=True)
         return video_ids
 
-    def _get_keyframes_list(self, video_id):
-        keyframes_path = self._work_dir / "keyframes" / video_id
+    def _get_keyframes_list(self, model_name, video_id, do_overwrite):
+        keyframes_dir = self._work_dir / "keyframes" / video_id
+        features_dir = self._work_dir / "features" / video_id
+
+        has_features = set()
+        if features_dir.exists() and not do_overwrite:
+            for keyframe in features_dir.glob("*"):
+                if not keyframe.is_dir():
+                    continue
+                for feature in keyframe.glob("*"):
+                    if feature.is_dir():
+                        continue
+                    if feature.stem == model_name:
+                        has_features.add(keyframe.stem)
+                        break
 
         keyframes = []
-        for keyframe in os.scandir(keyframes_path):
-            keyframes.append(Path(keyframe.path))
+        for keyframe in keyframes_dir.glob("*"):
+            if (
+                keyframe.is_dir()
+                or keyframe.stem[0] == "."
+                or keyframe.stem in has_features
+            ):
+                continue
+            keyframes.append(keyframe)
 
         return keyframes
 
     def _extract_features(
         self,
         model_name,
-        clip,
+        model,
         video_id,
         batch_size,
         do_overwrite,
         update_progress,
     ):
         update_progress(description="Extracting features...")
-        keyframe_files = self._get_keyframes_list(video_id)
+        keyframe_files = self._get_keyframes_list(
+            model_name, video_id, do_overwrite
+        )
+        if len(keyframe_files) == 0:
+            return 1
         features_dir = self._work_dir / f"features" / video_id
 
-        features = clip.get_image_features(
+        features = model.get_image_features(
             keyframe_files,
             batch_size,
             lambda finished_batches, total_batches, _: update_progress(
                 completed=finished_batches, total=total_batches
             ),
         )
-        features = features.cpu()
+        if model_name == "clip":
+            features = features.cpu()
+
         update_progress(
             completed=0,
-            total=features.size(0),
+            total=len(keyframe_files),
             description="Saving features...",
         )
         for i, path in enumerate(keyframe_files):
-            feature_file = features_dir / path.stem / f"{model_name}.npy"
-            feature_file.parent.mkdir(parents=True, exist_ok=True)
-            if not feature_file.exists() or do_overwrite:
-                np.save(feature_file, features[i])
+            save_dir = features_dir / path.stem
+            save_dir.mkdir(parents=True, exist_ok=True)
+            if isinstance(features[i], torch.Tensor) or isinstance(
+                features[i], np.ndarray
+            ):
+                np.save(save_dir / f"{model_name}.npy", features[i])
+            elif isinstance(features[i], str):
+                with open(save_dir / f"{model_name}.txt", "w") as f:
+                    f.write(features[i])
+            else:
+                with open(save_dir / f"{model_name}.json", "w") as f:
+                    json.dump(features[i], f)
             update_progress(advance=1)
 
         return 1
