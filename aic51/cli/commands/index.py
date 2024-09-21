@@ -50,6 +50,7 @@ class IndexCommand(BaseCommand):
         MilvusDatabase.start_server()
         database = MilvusDatabase(collection_name, do_overwrite)
         features_dir = self._work_dir / "features"
+        keyframes_dir = self._work_dir / "keyframes"
         max_workers_ratio = GlobalConfig.get("max_workers_ratio") or 0
         with (
             Progress(
@@ -92,7 +93,7 @@ class IndexCommand(BaseCommand):
 
             futures = []
             video_paths = sorted(
-                [d for d in features_dir.glob("*/") if d.is_dir()],
+                [d for d in keyframes_dir.glob("*/") if d.is_dir()],
                 key=lambda path: path.stem,
             )
             for video_path in video_paths:
