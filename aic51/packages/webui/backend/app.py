@@ -220,6 +220,11 @@ if WEB_DIR.exists():
         StaticFiles(directory=WEB_DIR / "dist/assets"),
         "assets",
     )
+    app.mount(
+        "/icon",
+        StaticFiles(directory=WEB_DIR / "dist/icon"),
+        "icon",
+    )
 
     @app.get("/{rest_of_path:path}")
     async def client_app():
