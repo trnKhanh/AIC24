@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from urllib.parse import urlparse, urlunparse
 from pathlib import Path
 
 import requests
@@ -17,11 +18,9 @@ from ....config import GlobalConfig
 WORK_DIR = Path(os.getenv("AIC51_WORK_DIR") or ".")
 logger = logging.getLogger(__name__)
 
-is_main = GlobalConfig.get("webui", "main") or False
-
 searcher = Searcher(GlobalConfig.get("webui", "database") or "milvus")
-search_backend = GlobalConfig.get("webui", "search_backend")
-video_backends = GlobalConfig.get("webui", "video_backend")
+search_server = GlobalConfig.get("webui", "search")
+video_server = GlobalConfig.get("webui", "video")
 
 app = FastAPI()
 origins = [
@@ -50,17 +49,21 @@ async def search(
     max_interval: int = 250,
     selected: str | None = None,
 ):
-    if search_backend != None and search_backend["host"] not in [
-        "127.0.0.1",
-        "localhost",
-    ]:
-        if not is_main:
+    do_serve = GlobalConfig.get("webui", "search", "serve") or False
+    if not do_serve:
+        backend = GlobalConfig.get("webui", "search", "backend")
+        if backend:
+            parse_url = urlparse(
+                f"{backend['host']}:{backend['port']}/api/search",
+            )
+            is_local = parse_url.hostname in ["localhost", "127.0.0.1"]
+            if not is_local:
+                proxy_res = requests.get(
+                    urlunparse(parse_url), params=request.query_params
+                )
+                return proxy_res.json()
+        else:
             return Response(status_code=404)
-        proxy_res = requests.get(
-            f"{search_backend['host']}:{search_backend['port']}/api/search",
-            request.query_params,
-        )
-        return proxy_res.json()
 
     res = searcher.search(
         q,
@@ -131,15 +134,21 @@ async def similar(
     ocr_threshold: int = 40,
     max_interval: int = 250,
 ):
-    if search_backend != None and search_backend["host"] not in [
-        "127.0.0.1",
-        "localhost",
-    ]:
-        if not is_main:
+    do_serve = GlobalConfig.get("webui", "search", "serve") or False
+    if not do_serve:
+        backend = GlobalConfig.get("webui", "search", "backend")
+        if backend:
+            parse_url = urlparse(
+                f"{backend['host']}:{backend['port']}/api/similar",
+            )
+            is_local = parse_url.hostname in ["localhost", "127.0.0.1"]
+            if not is_local:
+                proxy_res = requests.get(
+                    urlunparse(parse_url), params=request.query_params
+                )
+                return proxy_res.json()
+        else:
             return Response(status_code=404)
-        return RedirectResponse(
-            f"{search_backend['host']}:{search_backend['port']}/api/search",
-        )
 
     res = searcher.search_similar(id, offset, limit, nprobe, model)
     frames = []
@@ -193,16 +202,6 @@ async def frame_info(request: Request, video_id: str, frame_id: str):
         f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
     )
     video_uri = f"{request.base_url}api/stream/videos/{video_id}.mp4"
-    if not Path(frame_uri).exists() and not Path(video_uri).exists():
-        if is_main and video_backends is not None:
-            for video_backend in video_backends:
-                proxy_res = requests.get(
-                    f"{video_backend['host']}:{video_backend['port']}/api/frame_info",
-                    request.query_params,
-                )
-                if proxy_res.status_code != 404:
-                    return proxy_res
-        return Response(status_code=404)
     try:
         with open(WORK_DIR / "videos_info" / f"{video_id}.json", "r") as f:
             fps = json.load(f)["frame_rate"]
@@ -220,11 +219,17 @@ async def frame_info(request: Request, video_id: str, frame_id: str):
 
 @app.get("/api/files/{file_path:path}")
 async def get_file(file_path):
-    if not (WORK_DIR / file_path).exists():
-        if is_main and video_backends is not None:
-            for video_backend in video_backends:
+    no_file = not (WORK_DIR / file_path).exists()
+    if no_file:
+        backends = GlobalConfig.get("webui", "video", "backend") or []
+        for backend in backends:
+            parse_url = urlparse(
+                f"{backend['host']}:{backend['port']}/api/files/{file_path}",
+            )
+            is_local = parse_url.hostname in ["localhost", "127.0.0.1"]
+            if not is_local:
                 proxy_res = requests.get(
-                    f"{video_backend['host']}:{video_backend['port']}/api/file/{file_path}",
+                    urlunparse(parse_url),
                 )
                 if proxy_res.status_code != 404:
                     return proxy_res
@@ -236,13 +241,21 @@ CHUNK_SIZE = 1024 * 1024
 
 
 @app.get("/api/stream/{file_path:path}")
-async def video_endpoint(file_path: str, range: str = Header(None)):
-    if not (WORK_DIR / file_path).exists():
-        if is_main and video_backends is not None:
-            for video_backend in video_backends:
+async def video_endpoint(
+    request: Request, file_path: str, range: str = Header(None)
+):
+    no_file = not (WORK_DIR / file_path).exists()
+    if no_file:
+        backends = GlobalConfig.get("webui", "video", "backend") or []
+        for backend in backends:
+            parse_url = urlparse(
+                f"{backend['host']}:{backend['port']}/api/stream/{file_path}",
+            )
+            is_local = parse_url.hostname in ["localhost", "127.0.0.1"]
+            if not is_local:
                 proxy_res = requests.get(
-                    f"{video_backend['host']}:{video_backend['port']}/api/stream/{file_path}",
-                    headers={"range": range},
+                    urlunparse(parse_url),
+                    headers=request.headers,
                 )
                 if proxy_res.status_code != 404:
                     return proxy_res
@@ -267,15 +280,20 @@ async def video_endpoint(file_path: str, range: str = Header(None)):
 
 @app.get("/api/models")
 async def models():
-    if search_backend != None and search_backend["host"] not in [
-        "127.0.0.1",
-        "localhost",
-    ]:
-        if not is_main:
+    do_serve = GlobalConfig.get("webui", "search", "serve") or False
+    if not do_serve:
+        backend = GlobalConfig.get("webui", "search", "backend")
+        if backend:
+            parse_url = urlparse(
+                f"{backend['host']}:{backend['port']}/api/models",
+            )
+            is_local = parse_url.hostname in ["localhost", "127.0.0.1"]
+            if not is_local:
+                proxy_res = requests.get(urlunparse(parse_url))
+                return proxy_res.json()
+        else:
             return Response(status_code=404)
-        return RedirectResponse(
-            f"{search_backend['host']}:{search_backend['port']}/api/models",
-        )
+
     return {"models": searcher.get_models()}
 
 
