@@ -33,3 +33,10 @@ milvus:
 webui:
   features: *analyse_features
   database: "milvus"
+  main: true
+  search_backend:
+    host: "127.0.0.1"
+    port: 5100
+  video_backend:
+    - host: "127.0.0.1"
+      port: 5100
