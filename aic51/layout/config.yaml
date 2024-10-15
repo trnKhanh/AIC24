@@ -34,13 +34,12 @@ webui:
   features: *analyse_features
   database: "milvus"
   search:
-    serve: True
-    # backend:
-    #   host: <HOST>
-    #   port: <PORT>
+    timeout: null
+    request_size: 10
+    backends:
+      - host: http://127.0.0.1:5100
   video:
-    # backend:
-    #   - host: <HOST_1>
-    #     port: <PORT_1>
-    #   - host: <HOST_2>
-    #     port: <PORT_2>
+    timeout: null
+    request_size: 10
+    backends:
+      - host: http://127.0.0.1:5100

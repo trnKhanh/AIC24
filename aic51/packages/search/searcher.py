@@ -28,6 +28,7 @@ class Searcher(object):
             self._logger.error(
                 f'No models found in "{GlobalConfig.CONFIG_FILE}". Check your "{GlobalConfig.CONFIG_FILE}"'
             )
+        
 
     def get(self, id):
         return self._database.get(id)
