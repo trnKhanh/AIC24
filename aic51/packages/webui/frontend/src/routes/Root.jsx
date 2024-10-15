@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router-dom";
+import { useLoaderData, useNavigation } from "react-router-dom";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
@@ -12,7 +12,9 @@ export async function loader() {
   return { modelOptions: data["models"] };
 }
 export default function Root() {
+  const navigation = useNavigation();
   const { modelOptions } = useLoaderData();
+  console.log(navigation.state)
   return (
     <VideoProvider>
       <div className="flex flex-row">
