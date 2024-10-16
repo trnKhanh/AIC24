@@ -83,6 +83,7 @@ export function TemporalQueryContainer({
     let bbox = [];
     if (objectbbStrPart.length > 1) {
       bbox = objectbbStrPart[1].split(",");
+      for (let i = 0; i < bbox.length; ++i) bbox[i] = parseFloat(bbox[i])
     }
     while (bbox.length > 4) {
       bbox.pop();
@@ -227,7 +228,7 @@ export function ObjectContainer({ objectOptions, objectbbs, onChange }) {
             <ObjectBox
               objectbb={
                 o[1] +
-                (Math.round(o[0][2] - o[0][0]) < 1
+                (o[0][2] - o[0][0] < 1
                   ? o[0][0] < 0.25
                     ? "(L)"
                     : o[0][0] > 0.25
@@ -264,10 +265,27 @@ export function SearchabeDropdown({ name, options, onSelect }) {
   const dropdownElement = useRef(null);
   const visibleOptions = [];
   for (const opt of options) {
-    if (opt.includes(search)) {
-      visibleOptions.push(opt);
+    let l = 0;
+    const lowerOpt = opt.toLowerCase();
+    for (let r = 0; r < opt.length; ++r) {
+      if (lowerOpt[r] === search[l]) ++l;
+    }
+    let score = 1;
+    if (search.length > 0) score = l / search.length;
+    if (score > 0) {
+      visibleOptions.push({ value: opt, score: score });
     }
   }
+  visibleOptions.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    if (a.value.length !== b.value.length)
+      return a.value.length - b.value.length;
+    const v1 = a.value.toLowerCase();
+    const v2 = b.value.toLowerCase();
+    if (v1 < v2) return -1;
+    if (v1 > v2) return 1;
+    return 0;
+  });
 
   const handleOnChange = (e) => {
     const text = e.target.value;
@@ -321,16 +339,16 @@ export function SearchabeDropdown({ name, options, onSelect }) {
         >
           {visibleOptions.map((opt) => (
             <div
-              key={opt}
+              key={opt.value}
               className="hover:bg-blue-200"
               onClick={(e) => {
                 e.stopPropagation();
                 setSearch("");
                 setIsFocus(false);
-                onSelect(opt);
+                onSelect(opt.value);
               }}
             >
-              {opt}
+              {opt.value}
             </div>
           ))}
         </div>

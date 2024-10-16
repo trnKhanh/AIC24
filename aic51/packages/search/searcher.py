@@ -110,7 +110,7 @@ class Searcher(object):
     def _process_objects(self, advance_query, result, object_weight):
         if "objects" not in advance_query:
             return result
-        class_ids = dict([(v, int(k)) for k, v in Yolo.classes_list().items()])
+        class_ids = dict([(v.lower(), int(k)) for k, v in Yolo.classes_list().items()])
         query_objects = advance_query["objects"]
         query_objects = [
             [x[0], class_ids[x[1]]] for x in query_objects if x[1] in class_ids
