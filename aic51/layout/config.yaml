@@ -9,7 +9,7 @@ analyse:
     - name: "ocr"
       batch_size: 8
     - name: "yolo"
-      pretrained_model: "yolo11l.pt"
+      pretrained_model: "yolov8l-oiv7.pt"
       batch_size: 16
   num_workers: 1
   pin_memory: true
@@ -26,9 +26,7 @@ milvus:
     - field_name: "ocr"
       datatype: "JSON"
     - field_name: "yolo"
-      datatype: "ARRAY"
-      element_type: "INT64"
-      max_capacity: 300
+      datatype: "JSON"
   indices:
     - field_name: "clip"
       metric_type: "COSINE"
