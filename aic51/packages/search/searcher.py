@@ -115,7 +115,6 @@ class Searcher(object):
         query_objects = [
             [x[0], class_ids[x[1]]] for x in query_objects if x[1] in class_ids
         ]
-        self._logger.debug(query_objects)
 
         def cal_area(bbox):
             if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
@@ -148,7 +147,6 @@ class Searcher(object):
                     record_class = int(record_object[1])
                     if query_class != record_class:
                         continue
-                    self._logger.debug(f"{query_class}, {record_class}")
                     query_bbox = [float(x) for x in query_object[0]]
                     record_bbox = [
                         float(x)
@@ -180,6 +178,11 @@ class Searcher(object):
             for query_text in query_ocr:
                 max_distance = 0
                 for record_text in record_ocr:
+                    record_bbox = [
+                        float(x) for x in record_text[0][0] + record_text[0][2]
+                    ]
+                    if record_bbox[1] > 0.90:
+                        continue
                     partial_ratio = fuzz.partial_ratio(
                         query_text.lower(), record_text[1].lower()
                     )
@@ -208,6 +211,7 @@ class Searcher(object):
                 video_id = int(video_id)
                 frame_id = int(frame_id)
                 results[i][j]["_id"] = (video_id, frame_id)
+                results[i][j]["distance"] = results[i][j]["distance"] ** (1 / 2)
 
         for res in results[::-1]:
             if best is None:

@@ -4,7 +4,12 @@ import AddButton from "../assets/add-btn.svg";
 import DeleteButton from "../assets/delete-btn.svg";
 import XButton from "../assets/x-btn.svg";
 
-export function AdvanceQueryContainer({ q, onChange, objectOptions }) {
+export function AdvanceQueryContainer({
+  q,
+  onChange,
+  objectOptions,
+  onSubmit,
+}) {
   const temporalQueries = q.split(";");
   const handleOnChange = (id, newTemporalQuery) => {
     temporalQueries[id] = newTemporalQuery;
@@ -19,6 +24,7 @@ export function AdvanceQueryContainer({ q, onChange, objectOptions }) {
       {temporalQueries.map((tq, id) => (
         <div key={id} className="basis-1/4 p-1">
           <TemporalQueryContainer
+            onSubmit={onSubmit}
             objectOptions={objectOptions}
             temporalQuery={tq}
             onChange={(newTemporalQuery) => {
@@ -50,6 +56,7 @@ export function TemporalQueryContainer({
   onChange,
   onDelete,
   objectOptions,
+  onSubmit,
 }) {
   let q = temporalQuery;
   let ocrRegex = /OCR:((".*?")|\S+)\s?/g;
@@ -140,13 +147,23 @@ export function TemporalQueryContainer({
         rows={2}
         value={q}
         onChange={handleOnChange}
+        onKeyDown={(e) => {
+          if (e.keyCode === 13 && e.shiftKey === false) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
       />
       <textarea
         className="bg-slate-100 text-slate-400 focus:bg-white focus:text-black focus:outline-none"
         rows={1}
         value={ocrs.join(",")}
         onKeyDown={(e) => {
-          if (e.keyCode === 222) {
+          if (e.keyCode === 13 && e.shiftKey === false) {
+            e.preventDefault();
+            onSubmit();
+          }
+          if (e.keyCode === 222 || e.keyCode === 13) {
             e.preventDefault();
           }
         }}
@@ -162,7 +179,7 @@ export function TemporalQueryContainer({
 }
 
 export function ObjectContainer({ objectOptions, objectbbs, onChange }) {
-  const [position, setPosition] = useState("L");
+  const [position, setPosition] = useState("");
   const handleOnDelete = (id) => {
     objectbbs.splice(id, 1);
     onChange(objectbbs);
@@ -170,11 +187,13 @@ export function ObjectContainer({ objectOptions, objectbbs, onChange }) {
   const handleOnCreate = (o) => {
     if (objectOptions.includes(o)) {
       if (position === "L") {
-        objectbbs.push([[0, 0, 0.5, 0], o]);
+        objectbbs.push([[0, 0, 0.5, 1], o]);
       } else if (position === "M") {
-        objectbbs.push([[0.25, 0, 0.75, 0], o]);
+        objectbbs.push([[0.25, 0, 0.75, 1], o]);
+      } else if (position === "R") {
+        objectbbs.push([[0.5, 0, 1, 1], o]);
       } else {
-        objectbbs.push([[0.5, 0, 1, 0], o]);
+        objectbbs.push([[0, 0, 1, 1], o]);
       }
     }
     onChange(objectbbs);
@@ -182,6 +201,18 @@ export function ObjectContainer({ objectOptions, objectbbs, onChange }) {
   return (
     <div className="flex flex-col space-y-1">
       <div className="flex flex-row ">
+        <select
+          className="bg-red-200"
+          value={position}
+          onChange={(e) => {
+            setPosition(e.target.value);
+          }}
+        >
+          <option value=""></option>
+          <option value="L">L</option>
+          <option value="M">M</option>
+          <option value="R">R</option>
+        </select>
         <div className="flex-1">
           <SearchabeDropdown
             name={"objectbb-selection"}
@@ -189,21 +220,23 @@ export function ObjectContainer({ objectOptions, objectbbs, onChange }) {
             onSelect={(opt) => handleOnCreate(opt)}
           />
         </div>
-        <select
-          value={position}
-          onChange={(e) => {
-            setPosition(e.target.value);
-          }}
-        >
-          <option value="L">L</option>
-          <option value="M">M</option>
-          <option value="R">R</option>
-        </select>
       </div>
       <div className="flex flex-row flex-wrap">
         {objectbbs.map((o, id) => (
           <div key={id} className="px-1">
-            <ObjectBox objectbb={o[1]} onDelete={() => handleOnDelete(id)} />
+            <ObjectBox
+              objectbb={
+                o[1] +
+                (Math.round(o[0][2] - o[0][0]) < 1
+                  ? o[0][0] < 0.25
+                    ? "(L)"
+                    : o[0][0] > 0.25
+                      ? "(R)"
+                      : "(M)"
+                  : "")
+              }
+              onDelete={() => handleOnDelete(id)}
+            />
           </div>
         ))}
       </div>

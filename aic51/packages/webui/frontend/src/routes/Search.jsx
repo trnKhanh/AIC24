@@ -43,7 +43,8 @@ export async function loader({ request }) {
   const ocr_weight = searchParams.get("ocr_weight") || ocr_weight_default;
   const ocr_threshold =
     searchParams.get("ocr_threshold") || ocr_threshold_default;
-  const object_weight = searchParams.get("object_weight") || object_weight_default;
+  const object_weight =
+    searchParams.get("object_weight") || object_weight_default;
   const max_interval = searchParams.get("max_interval") || max_interval_default;
 
   const { total, frames, params, offset } = await search(
@@ -72,7 +73,7 @@ export async function loader({ request }) {
 
 export default function Search() {
   const navigation = useNavigation();
-  const { modelOptions, objectOptions} = useOutletContext();
+  const { modelOptions, objectOptions } = useOutletContext();
   const submit = useSubmit();
   const { query, params, offset, data, selected } = useLoaderData();
   const playVideo = usePlayVideo();
@@ -283,6 +284,9 @@ export default function Search() {
             q={qState}
             onChange={handleOnChangeAdvanceQuery}
             objectOptions={objectOptions}
+            onSubmit={() => {
+              document.querySelector("#search-form input").click();
+            }}
           />
         </div>
       </Form>
