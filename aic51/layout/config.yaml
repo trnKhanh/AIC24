@@ -8,6 +8,9 @@ analyse:
       batch_size: 16
     - name: "ocr"
       batch_size: 8
+    - name: "yolo"
+      pretrained_model: "yolo11l.pt"
+      batch_size: 16
   num_workers: 1
   pin_memory: true
 
