@@ -4,7 +4,7 @@ import AddButton from "../assets/add-btn.svg";
 import DeleteButton from "../assets/delete-btn.svg";
 import XButton from "../assets/x-btn.svg";
 
-export function AdvanceQueryContainer({ q, onChange }) {
+export function AdvanceQueryContainer({ q, onChange, objectOptions }) {
   const temporalQueries = q.split(";");
   const handleOnChange = (id, newTemporalQuery) => {
     temporalQueries[id] = newTemporalQuery;
@@ -17,9 +17,9 @@ export function AdvanceQueryContainer({ q, onChange }) {
   return (
     <div className="flex flex-row items-center flex-wrap">
       {temporalQueries.map((tq, id) => (
-        <div className="basis-1/4 p-1">
+        <div key={id} className="basis-1/4 p-1">
           <TemporalQueryContainer
-            key={id}
+            objectOptions={objectOptions}
             temporalQuery={tq}
             onChange={(newTemporalQuery) => {
               handleOnChange(id, newTemporalQuery);
@@ -45,7 +45,12 @@ export function AdvanceQueryContainer({ q, onChange }) {
   );
 }
 
-export function TemporalQueryContainer({ temporalQuery, onChange, onDelete }) {
+export function TemporalQueryContainer({
+  temporalQuery,
+  onChange,
+  onDelete,
+  objectOptions,
+}) {
   let q = temporalQuery;
   let ocrRegex = /OCR:((".*?")|\S+)\s?/g;
   const ocrMatches = q.matchAll(ocrRegex);
@@ -63,12 +68,23 @@ export function TemporalQueryContainer({ temporalQuery, onChange, onDelete }) {
   const objectbbMatches = q.matchAll(objectbbRegex);
   const objectbbs = [];
   for (const match of objectbbMatches) {
-    objectbbs.push(
-      match[0]
-        .substring(7)
-        .trim()
-        .replace(/(^"|"$)/g, ""),
-    );
+    const objectbbStr = match[0]
+      .substring(7)
+      .trim()
+      .replace(/(^"|"$)/g, "");
+    const objectbbStrPart = objectbbStr.split("_");
+    let bbox = [];
+    if (objectbbStrPart.length > 1) {
+      bbox = objectbbStrPart[1].split(",");
+    }
+    while (bbox.length > 4) {
+      bbox.pop();
+    }
+    while (bbox.length < 4) {
+      if (bbox.length < 2) bbox.push(0);
+      else bbox.push(1);
+    }
+    objectbbs.push([bbox, objectbbStrPart[0]]);
     q = q.replace(match[0], "");
   }
 
@@ -79,7 +95,7 @@ export function TemporalQueryContainer({ temporalQuery, onChange, onDelete }) {
       selectorStr.push(`OCR:"${ocr}"`);
     }
     for (const objectbb of objectbbs) {
-      selectorStr.push(`object:"${objectbb}"`);
+      selectorStr.push(`object:"${objectbb[1]}_${objectbb[0].join(",")}"`);
     }
     onChange(newQ + selectorStr.join(" "));
   };
@@ -92,19 +108,18 @@ export function TemporalQueryContainer({ temporalQuery, onChange, onDelete }) {
       }
     }
     for (const objectbb of objectbbs) {
-      selectorStr.push(`object:"${objectbb}"`);
+      selectorStr.push(`object:"${objectbb[1]}_${objectbb[0].join(",")}"`);
     }
 
     onChange(q + selectorStr.join(" "));
   };
   const handleOnObjectbbChange = (newObjectbbs) => {
-    console.log(newObjectbbs);
     let selectorStr = [];
     for (const ocr of ocrs) {
       selectorStr.push(`OCR:"${ocr}"`);
     }
     for (const objectbb of newObjectbbs) {
-      selectorStr.push(`object:"${objectbb}"`);
+      selectorStr.push(`object:"${objectbb[1]}_${objectbb[0].join(",")}"`);
     }
 
     onChange(q + selectorStr.join(" "));
@@ -139,53 +154,56 @@ export function TemporalQueryContainer({ temporalQuery, onChange, onDelete }) {
       />
       <ObjectContainer
         objectbbs={objectbbs}
+        objectOptions={objectOptions}
         onChange={handleOnObjectbbChange}
       />
     </div>
   );
 }
-const options = [
-  "dog",
-  "cat",
-  "people",
-  "car",
-  "train",
-  "box",
-  "plane",
-  "plain",
-  "tv",
-  "phone",
-  "picture",
-  "face",
-  "girl",
-  "lady",
-  "men",
-];
 
-export function ObjectContainer({ objectbbs, onChange }) {
+export function ObjectContainer({ objectOptions, objectbbs, onChange }) {
+  const [position, setPosition] = useState("L");
   const handleOnDelete = (id) => {
     objectbbs.splice(id, 1);
     onChange(objectbbs);
   };
   const handleOnCreate = (o) => {
-    if (options.includes(o)) objectbbs.push(o);
+    if (objectOptions.includes(o)) {
+      if (position === "L") {
+        objectbbs.push([[0, 0, 0.5, 0], o]);
+      } else if (position === "M") {
+        objectbbs.push([[0.25, 0, 0.75, 0], o]);
+      } else {
+        objectbbs.push([[0.5, 0, 1, 0], o]);
+      }
+    }
     onChange(objectbbs);
   };
   return (
     <div className="flex flex-col space-y-1">
-      <SearchabeDropdown
-        name={"objectbb-selection"}
-        options={options}
-        onSelect={(opt) => handleOnCreate(opt)}
-      />
+      <div className="flex flex-row ">
+        <div className="flex-1">
+          <SearchabeDropdown
+            name={"objectbb-selection"}
+            options={objectOptions}
+            onSelect={(opt) => handleOnCreate(opt)}
+          />
+        </div>
+        <select
+          value={position}
+          onChange={(e) => {
+            setPosition(e.target.value);
+          }}
+        >
+          <option value="L">L</option>
+          <option value="M">M</option>
+          <option value="R">R</option>
+        </select>
+      </div>
       <div className="flex flex-row flex-wrap">
         {objectbbs.map((o, id) => (
-          <div className="px-1">
-            <ObjectBox
-              key={id}
-              objectbb={o}
-              onDelete={() => handleOnDelete(id)}
-            />
+          <div key={id} className="px-1">
+            <ObjectBox objectbb={o[1]} onDelete={() => handleOnDelete(id)} />
           </div>
         ))}
       </div>

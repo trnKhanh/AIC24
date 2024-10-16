@@ -9,6 +9,7 @@ from thefuzz import fuzz
 from ..index import MilvusDatabase
 from ...config import GlobalConfig
 from ...packages.analyse.features import CLIP
+from ...packages.analyse.objects import Yolo
 
 
 class Searcher(object):
@@ -28,13 +29,15 @@ class Searcher(object):
             self._logger.error(
                 f'No models found in "{GlobalConfig.CONFIG_FILE}". Check your "{GlobalConfig.CONFIG_FILE}"'
             )
-        
 
     def get(self, id):
         return self._database.get(id)
 
     def get_models(self):
         return list(self._models.keys())
+
+    def get_objects_classes(self):
+        return list(Yolo.classes_list().values())
 
     def _process_query(self, query):
         video_match = re.search('video:((".+?")|\\S+)\\s?', query)
@@ -63,49 +66,135 @@ class Searcher(object):
                     match.group().replace("OCR:", "", 1).strip('" ').lower()
                 )
                 q = q.replace(match.group(), "")
+            objects = []
+            while True:
+                match = re.search('object:((".+?")|\\S+)\\s?', q)
+                if match is None:
+                    break
+                object_str = (
+                    match.group().replace("object:", "", 1).strip('" ').lower()
+                )
+                object_parts = object_str.split("_")
+                bbox = (
+                    [float(x) for x in object_parts[1].split(",")]
+                    if len(object_parts) > 1
+                    else []
+                )
+                if len(bbox) > 4:
+                    bbox = bbox[:4]
+                while len(bbox) != 4:
+                    bbox.append(0 if len(bbox) < 2 else 1)
+
+                objects.append([bbox, object_parts[0]])
+
+                q = q.replace(match.group(), "")
 
             processed["queries"].append(q)
             processed["advance"].append({})
 
             if len(ocr) > 0:
                 processed["advance"][-1]["ocr"] = ocr
+            if len(objects) > 0:
+                processed["advance"][-1]["objects"] = objects
         return processed
 
     def _process_advance(
-        self, advance_query, result, ocr_weight, ocr_threshold
+        self, advance_query, result, ocr_weight, ocr_threshold, object_weight
     ):
+        result = self._process_ocr(
+            advance_query, result, ocr_weight, ocr_threshold
+        )
+        result = self._process_objects(advance_query, result, object_weight)
+        return result
+
+    def _process_objects(self, advance_query, result, object_weight):
+        if "objects" not in advance_query:
+            return result
+        class_ids = dict([(v, int(k)) for k, v in Yolo.classes_list().items()])
+        query_objects = advance_query["objects"]
+        query_objects = [
+            [x[0], class_ids[x[1]]] for x in query_objects if x[1] in class_ids
+        ]
+        self._logger.debug(query_objects)
+
+        def cal_area(bbox):
+            if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
+                return 0
+            return (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+
+        def cal_IOU(bbox1, bbox2):
+            inter = [
+                max(bbox1[0], bbox2[0]),
+                max(bbox1[1], bbox2[1]),
+                min(bbox1[2], bbox2[2]),
+                min(bbox1[3], bbox2[3]),
+            ]
+            inter_area = cal_area(inter)
+            area1 = cal_area(bbox1)
+            area2 = cal_area(bbox2)
+            return inter_area / (area1 + area2 - inter_area)
+
+        for i, record in enumerate(result):
+            record_objects = (
+                record["entity"]["yolo"] if "yolo" in record["entity"] else []
+            )
+            sum_distance = 0
+            cnt = 0
+            # format of each object: [bbox, cls, conf]
+            for query_object in query_objects:
+                max_distance = 0
+                for record_object in record_objects:
+                    query_class = int(query_object[1])
+                    record_class = int(record_object[1])
+                    if query_class != record_class:
+                        continue
+                    self._logger.debug(f"{query_class}, {record_class}")
+                    query_bbox = [float(x) for x in query_object[0]]
+                    record_bbox = [
+                        float(x)
+                        for x in record_object[0][0] + record_object[0][2]
+                    ]
+                    iou = cal_IOU(query_bbox, record_bbox)
+                    record_conf = float(record_object[2])
+                    cur_distance = iou * record_conf
+                    max_distance = max(max_distance, cur_distance)
+                sum_distance += max_distance
+                if max_distance != 0:
+                    cnt += 1
+            result[i]["distance"] += (
+                object_weight * sum_distance / cnt if cnt > 0 else 0
+            )
+        result = sorted(result, key=lambda x: x["distance"], reverse=True)
+        return result
+
+    def _process_ocr(self, advance_query, result, ocr_weight, ocr_threshold):
         if "ocr" not in advance_query:
             return result
         query_ocr = advance_query["ocr"]
-        res = deepcopy(result)
         for i, record in enumerate(result):
-            ocr_distance = 0
+            record_ocr = (
+                record["entity"]["ocr"] if "ocr" in record["entity"] else []
+            )
+            sum_distance = 0
+            cnt = 0
             for query_text in query_ocr:
-                ocr = (
-                    record["entity"]["ocr"] if "ocr" in record["entity"] else []
-                )
-                ocr_text_distance = 0
-                cnt = 0
-                for text in ocr:
+                max_distance = 0
+                for record_text in record_ocr:
                     partial_ratio = fuzz.partial_ratio(
-                        query_text.lower(), text[-2].lower()
+                        query_text.lower(), record_text[1].lower()
                     )
                     if partial_ratio > ocr_threshold:
-                        cnt += 1
-                        ocr_text_distance += partial_ratio / 100
+                        max_distance = max(max_distance, partial_ratio / 100)
 
-                if cnt > 0:
-                    ocr_text_distance /= cnt
-                ocr_distance += ocr_text_distance
+                sum_distance += max_distance
+                if max_distance > 0:
+                    cnt += 1
 
-            if len(query_ocr) > 0:
-                ocr_distance /= len(query_ocr)
-
-            res[i]["distance"] = (
-                record["distance"] + ocr_distance * ocr_weight
-            ) / (1 + ocr_weight)
-        res = sorted(res, key=lambda x: x["distance"], reverse=True)
-        return res
+            result[i]["distance"] += (
+                ocr_weight * sum_distance / cnt if cnt > 0 else 0
+            )
+        result = sorted(result, key=lambda x: x["distance"], reverse=True)
+        return result
 
     def _combine_temporal_results(self, results, temporal_k, max_interval):
         best = None
@@ -217,6 +306,7 @@ class Searcher(object):
         temporal_k,
         ocr_weight,
         ocr_threshold,
+        object_weight,
         max_interval,
     ):
         params = {
@@ -226,6 +316,7 @@ class Searcher(object):
             "temporal_k": temporal_k,
             "ocr_weight": ocr_weight,
             "ocr_threshold": ocr_threshold,
+            "object_weight": object_weight,
             "max_interval": max_interval,
         }
         self._logger.debug(processed)
@@ -260,6 +351,7 @@ class Searcher(object):
                     results[i],
                     ocr_weight,
                     ocr_threshold,
+                    object_weight,
                 )
 
             st = time.time()
@@ -322,6 +414,7 @@ class Searcher(object):
         temporal_k: int = 10000,
         ocr_weight: float = 1.0,
         ocr_threshold: int = 40,
+        object_weight: float = 1.0,
         max_interval: int = 250,
         selected: str | None = None,
     ):
@@ -351,6 +444,7 @@ class Searcher(object):
                 temporal_k,
                 ocr_weight,
                 ocr_threshold,
+                object_weight,
                 max_interval,
             )
 

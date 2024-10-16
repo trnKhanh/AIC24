@@ -23,6 +23,7 @@ dependencies = [
   "uvicorn",
   "easyocr",
   "thefuzz",
+  "ultralytics",
 ]
 
 [project.scripts]

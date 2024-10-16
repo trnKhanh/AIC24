@@ -48,10 +48,7 @@ class ConcurrentRequest(object):
 
 
 def process_search_results(request, results):
-    domain = str(request.base_url)
-    logger.debug(domain)
     for id, frame in enumerate(results["frames"]):
-        logger.debug(frame)
         results["frames"][id] = process_frame_info(request, frame)
     return results
 

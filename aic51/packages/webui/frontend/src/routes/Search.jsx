@@ -25,6 +25,7 @@ import {
   temporal_k_default,
   ocr_weight_default,
   ocr_threshold_default,
+  object_weight_default,
   max_interval_default,
 } from "../resources/options.js";
 
@@ -42,6 +43,7 @@ export async function loader({ request }) {
   const ocr_weight = searchParams.get("ocr_weight") || ocr_weight_default;
   const ocr_threshold =
     searchParams.get("ocr_threshold") || ocr_threshold_default;
+  const object_weight = searchParams.get("object_weight") || object_weight_default;
   const max_interval = searchParams.get("max_interval") || max_interval_default;
 
   const { total, frames, params, offset } = await search(
@@ -53,6 +55,7 @@ export async function loader({ request }) {
     temporal_k,
     ocr_weight,
     ocr_threshold,
+    object_weight,
     max_interval,
     selected,
   );
@@ -69,7 +72,7 @@ export async function loader({ request }) {
 
 export default function Search() {
   const navigation = useNavigation();
-  const { modelOptions } = useOutletContext();
+  const { modelOptions, objectOptions} = useOutletContext();
   const submit = useSubmit();
   const { query, params, offset, data, selected } = useLoaderData();
   const playVideo = usePlayVideo();
@@ -228,6 +231,7 @@ export default function Search() {
           <Editable name="temporal_k" defaultValue={temporal_k_default} />
           <Editable name="ocr_weight" defaultValue={ocr_weight_default} />
           <Editable name="ocr_threshold" defaultValue={ocr_threshold_default} />
+          <Editable name="object_weight" defaultValue={object_weight_default} />
           <Editable name="max_interval" defaultValue={max_interval_default} />
         </div>
 
@@ -278,6 +282,7 @@ export default function Search() {
           <AdvanceQueryContainer
             q={qState}
             onChange={handleOnChangeAdvanceQuery}
+            objectOptions={objectOptions}
           />
         </div>
       </Form>

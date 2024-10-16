@@ -9,6 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from .command import BaseCommand
 from ...packages.index import MilvusDatabase
+from ...packages.analyse.objects import Yolo
 from ...config import GlobalConfig
 
 
@@ -106,6 +107,11 @@ class IndexCommand(BaseCommand):
         update_progress(description="Indexing...")
         features_dir = self._work_dir / "features" / video_id
         data_list = []
+        feature_fields = [
+            x["field_name"]
+            for x in GlobalConfig.get("milvus", "fields") or []
+            if x["field_name"] != "frame_id"
+        ]
         for frame_path in features_dir.glob("*/"):
             if not frame_path.is_dir():
                 continue
@@ -114,6 +120,8 @@ class IndexCommand(BaseCommand):
                 "frame_id": f"{video_id}#{frame_id}",  # This is because Milvus does not allow composite primary key
             }
             for feature_path in frame_path.glob("*"):
+                if feature_path.stem not in feature_fields:
+                    continue
                 if feature_path.is_dir():
                     continue
                 if feature_path.suffix == ".npy":

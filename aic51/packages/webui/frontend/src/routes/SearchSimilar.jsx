@@ -1,5 +1,14 @@
 import { searchSimilar } from "../services/search.js";
-import { nlist, limitOptions, nprobeOption } from "../resources/options.js";
+import {
+  nlist,
+  limitOptions,
+  nprobeOption,
+  temporal_k_default,
+  ocr_weight_default,
+  ocr_threshold_default,
+  object_weight_default,
+  max_interval_default,
+} from "../resources/options.js";
 
 export async function loader({ request }) {
   const url = new URL(request.url);
@@ -15,6 +24,8 @@ export async function loader({ request }) {
   const ocr_weight = searchParams.get("ocr_weight") || ocr_weight_default;
   const ocr_threshold =
     searchParams.get("ocr_threshold") || ocr_threshold_default;
+  const object_weight =
+    searchParams.get("object_weight") || object_weight_default;
   const max_interval = searchParams.get("max_interval") || max_interval_default;
 
   const { total, frames, params, offset } = await searchSimilar(
@@ -26,6 +37,7 @@ export async function loader({ request }) {
     temporal_k,
     ocr_weight,
     ocr_threshold,
+    object_weight,
     max_interval,
     selected,
   );

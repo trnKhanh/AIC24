@@ -47,6 +47,10 @@ class MilvusDatabase(object):
                 for field in fields:
                     if "datatype" in field:
                         field["datatype"] = self.DATATYPE_MAP[field["datatype"]]
+                    if "element_type" in field:
+                        field["element_type"] = self.DATATYPE_MAP[
+                            field["element_type"]
+                        ]
 
                     schema.add_field(**field)
 

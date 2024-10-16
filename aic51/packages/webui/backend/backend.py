@@ -13,7 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ...search import Searcher
 from ....config import GlobalConfig
-from .utils import ConcurrentRequest, GetRequest, process_search_results, process_frame_info
+from .utils import (
+    ConcurrentRequest,
+    GetRequest,
+    process_search_results,
+    process_frame_info,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +62,8 @@ def setup_search_proxy(app: FastAPI, request_timeout, gsize=10):
                     res = future.result()
                     if res and res.ok:
                         crequest.cancel_all()
-                        logger.debug(res.text)
                         return process_search_results(request, res.json())
             except Exception as e:
-                logger.exception(e)
                 return JSONResponse(
                     status_code=500,
                     content=jsonable_encoder({"msg": "Search proxy errors"}),
@@ -159,6 +162,42 @@ def setup_search_proxy(app: FastAPI, request_timeout, gsize=10):
                 ),
             )
 
+    @app.get("/api/objects")
+    async def object_classes():
+        backends = GlobalConfig.get("webui", "search", "backends")
+        if backends:
+            crequest = ConcurrentRequest(gsize)
+            objects_urls = [
+                urljoin(backend["host"], "api/_objects") for backend in backends
+            ]
+            objects_requests = [
+                GetRequest(url, timeout=request_timeout) for url in objects_urls
+            ]
+            crequest.map(objects_requests)
+
+            objects = set()
+            try:
+                for future in crequest.as_completed():
+                    res = future.result()
+                    if res and res.ok:
+                        for obj in res.json()["objects"]:
+                            objects.add(obj)
+            except:
+                return JSONResponse(
+                    status_code=500,
+                    content=jsonable_encoder(
+                        {"msg": "Get objects classes proxy errors"}
+                    ),
+                )
+            return {"objects": list(objects)}
+        else:
+            return JSONResponse(
+                status_code=404,
+                content=jsonable_encoder(
+                    {"msg": "No backend found in config file"}
+                ),
+            )
+
     return app
 
 
@@ -174,6 +213,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         temporal_k: int = 10000,
         ocr_weight: float = 1.0,
         ocr_threshold: int = 40,
+        object_weight: float = 1.0,
         max_interval: int = 250,
         selected: str | None = None,
     ):
@@ -188,10 +228,12 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
                 temporal_k,
                 ocr_weight,
                 ocr_threshold,
+                object_weight,
                 max_interval,
                 selected,
             )
-        except:
+        except Exception as e:
+            logger.exception(e)
             return JSONResponse(
                 status_code=500,
                 content=jsonable_encoder({"msg": "Search errors"}),
@@ -234,6 +276,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
             "temporal_k": temporal_k,
             "ocr_weight": ocr_weight,
             "ocr_threshold": ocr_threshold,
+            "object_weight": object_weight,
             "max_interval": max_interval,
         }
         return {
@@ -254,6 +297,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         temporal_k: int = 10000,
         ocr_weight: float = 1.0,
         ocr_threshold: int = 40,
+        object_weight: float = 1.0,
         max_interval: int = 250,
     ):
         res = searcher.search_similar(id, offset, limit, nprobe, model)
@@ -288,6 +332,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
             "temporal_k": temporal_k,
             "ocr_weight": ocr_weight,
             "ocr_threshold": ocr_threshold,
+            "object_weight": object_weight,
             "max_interval": max_interval,
         }
         return {
@@ -299,8 +344,11 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
 
     @app.get("/api/_models")
     async def _models():
-        logger.debug("123")
         return {"models": searcher.get_models()}
+
+    @app.get("/api/_objects")
+    async def _objects():
+        return {"objects": searcher.get_objects_classes()}
 
     return app
 
@@ -418,7 +466,6 @@ def setup_video_proxy(app: FastAPI, request_timeout, gsize=10):
             try:
                 for future in crequest.as_completed():
                     res = future.result()
-                    logger.debug(res.status_code)
                     if res and res.ok:
                         crequest.cancel_all()
                         parse_url = urlparse(str(res.url))
@@ -488,7 +535,6 @@ def setup_video(app, work_dir, searcher):
         request: Request, file_path: str, range: str = Header(None)
     ):
         start, end = range.replace("bytes=", "").split("-")
-        logger.debug(range)
         start = int(start)
         end = int(end) if end else start + CHUNK_SIZE
         video_path = Path(work_dir / file_path)

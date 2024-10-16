@@ -15,6 +15,7 @@ export async function search(
   temporal_k,
   ocr_weight,
   ocr_threshold,
+  object_weight,
   max_interval,
   selected,
 ) {
@@ -28,6 +29,7 @@ export async function search(
       temporal_k: temporal_k,
       ocr_weight: ocr_weight,
       ocr_threshold: ocr_threshold,
+      object_weight: object_weight,
       max_interval: max_interval,
       selected: selected,
     },
@@ -44,6 +46,7 @@ export async function searchSimilar(
   temporal_k,
   ocr_weight,
   ocr_threshold,
+  object_weight,
   max_interval,
 ) {
   const res = await axios.get(`${HOST}/api/similar`, {
@@ -56,6 +59,7 @@ export async function searchSimilar(
       temporal_k: temporal_k,
       ocr_weight: ocr_weight,
       ocr_threshold: ocr_threshold,
+      object_weight: object_weight,
       max_interval: max_interval,
     },
   });
@@ -75,6 +79,11 @@ export async function getFrameInfo(videoId, frameId) {
 }
 export async function getAvailableModels() {
   const res = await axios.get(`${HOST}/api/models`);
+  const data = res.data;
+  return data;
+}
+export async function getObjectClasses() {
+  const res = await axios.get(`${HOST}/api/objects`);
   const data = res.data;
   return data;
 }

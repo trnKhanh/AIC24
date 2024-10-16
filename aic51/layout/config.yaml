@@ -22,6 +22,10 @@ milvus:
       dim: 512
     - field_name: "ocr"
       datatype: "JSON"
+    - field_name: "yolo"
+      datatype: "ARRAY"
+      element_type: "INT64"
+      max_capacity: 300
   indices:
     - field_name: "clip"
       metric_type: "COSINE"
