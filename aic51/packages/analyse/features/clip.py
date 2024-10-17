@@ -1,4 +1,4 @@
-from transformers import CLIPModel, CLIPProcessor
+from transformers import AutoModel, AutoProcessor
 from torch.utils.data import DataLoader
 import torch
 
@@ -8,8 +8,8 @@ from .feature_extractor import FeatureExtractor, ImageDataset
 
 class CLIP(FeatureExtractor):
     def __init__(self, pretrained_model):
-        self._model = CLIPModel.from_pretrained(pretrained_model)
-        self._processor = CLIPProcessor.from_pretrained(pretrained_model)
+        self._model = AutoModel.from_pretrained(pretrained_model)
+        self._processor = AutoProcessor.from_pretrained(pretrained_model)
 
         self._model.eval()
 

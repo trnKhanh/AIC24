@@ -24,6 +24,7 @@ dependencies = [
   "easyocr",
   "thefuzz",
   "ultralytics",
+  "sentencepiece",
 ]
 
 [project.scripts]
