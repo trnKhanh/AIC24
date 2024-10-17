@@ -56,14 +56,6 @@ class ServeCommand(BaseCommand):
             help="Use dev mode",
         )
         parser.add_argument(
-            "-w",
-            "--workers",
-            dest="workers",
-            type=int,
-            default=1,
-            help="Number of workers to serve in uvicorn",
-        )
-        parser.add_argument(
             "--main",
             dest="do_main",
             action="store_true",
@@ -90,7 +82,6 @@ class ServeCommand(BaseCommand):
         search_port,
         video_port,
         dev_mode,
-        workers,
         do_main,
         do_search,
         do_video,
@@ -134,6 +125,8 @@ class ServeCommand(BaseCommand):
         os.environ["work_dir"] = str(self._work_dir)
 
         def run_logic_backend():
+            workers = GlobalConfig.get("webui", "workers") or 1
+            self._logger.debug(workers)
             uvicorn.run(
                 f"aic51.packages.webui.backend.logic:app",
                 host="0.0.0.0",
@@ -144,6 +137,7 @@ class ServeCommand(BaseCommand):
             )
 
         def get_search_backend():
+            workers = GlobalConfig.get("webui", "search", "workers") or 1
             return Process(
                 target=uvicorn.run,
                 name="AIC51 search service",
@@ -158,6 +152,7 @@ class ServeCommand(BaseCommand):
             )
 
         def get_video_backend():
+            workers = GlobalConfig.get("webui", "video", "workers") or 1
             return Process(
                 target=uvicorn.run,
                 name="AIC51 video service",

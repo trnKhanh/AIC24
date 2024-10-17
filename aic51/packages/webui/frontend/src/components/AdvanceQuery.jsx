@@ -83,7 +83,7 @@ export function TemporalQueryContainer({
     let bbox = [];
     if (objectbbStrPart.length > 1) {
       bbox = objectbbStrPart[1].split(",");
-      for (let i = 0; i < bbox.length; ++i) bbox[i] = parseFloat(bbox[i])
+      for (let i = 0; i < bbox.length; ++i) bbox[i] = parseFloat(bbox[i]);
     }
     while (bbox.length > 4) {
       bbox.pop();
@@ -267,8 +267,9 @@ export function SearchabeDropdown({ name, options, onSelect }) {
   for (const opt of options) {
     let l = 0;
     const lowerOpt = opt.toLowerCase();
+    const lowerSearch = search.toLowerCase();
     for (let r = 0; r < opt.length; ++r) {
-      if (lowerOpt[r] === search[l]) ++l;
+      if (lowerOpt[r] === lowerSearch[l]) ++l;
     }
     let score = 1;
     if (search.length > 0) score = l / search.length;

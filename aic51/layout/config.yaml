@@ -38,13 +38,16 @@ milvus:
 webui:
   features: *analyse_features
   database: "milvus"
+  workers: 1
   search:
     timeout: null
     request_size: 10
+    workers: 1
     backends:
       - host: http://127.0.0.1:5010
   video:
     timeout: null
     request_size: 10
+    workers: 1
     backends:
       - host: http://127.0.0.1:5011

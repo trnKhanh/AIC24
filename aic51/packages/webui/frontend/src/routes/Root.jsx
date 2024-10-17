@@ -1,9 +1,9 @@
 import { useLoaderData, useNavigation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Outlet } from "react-router-dom";
 
 import VideoProvider, { usePlayVideo } from "../components/VideoPlayer.jsx";
-
+import AuthProvider from "../components/AuthProvider.jsx";
 import AnswerSidebar from "../components/Answer.jsx";
 import { getAvailableModels, getObjectClasses } from "../services/search.js";
 
@@ -19,15 +19,17 @@ export default function Root() {
   const navigation = useNavigation();
   const { modelOptions, objectOptions } = useLoaderData();
   return (
-    <VideoProvider>
-      <div className="flex flex-row">
-        <div>
-          <div className="w-96">
-            <AnswerSidebar />
+    <AuthProvider>
+      <VideoProvider>
+        <div className="flex flex-row">
+          <div>
+            <div className="w-96">
+              <AnswerSidebar />
+            </div>
           </div>
+          <Outlet context={{ modelOptions, objectOptions }} />
         </div>
-        <Outlet context={{ modelOptions, objectOptions }} />
-      </div>
-    </VideoProvider>
+      </VideoProvider>
+    </AuthProvider>
   );
 }
