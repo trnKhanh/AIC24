@@ -59,7 +59,7 @@ export function TemporalQueryContainer({
   onSubmit,
 }) {
   let q = temporalQuery;
-  let ocrRegex = /OCR:((".*?")|\S+)\s?/g;
+  let ocrRegex = /OCR:((".*?")|\S+)\s?/gi;
   const ocrMatches = q.matchAll(ocrRegex);
   const ocrs = [];
   for (const match of ocrMatches) {
@@ -71,7 +71,7 @@ export function TemporalQueryContainer({
     );
     q = q.replace(match[0], "");
   }
-  let objectbbRegex = /object:((".*?")|\S+)\s?/g;
+  let objectbbRegex = /object:((".*?")|\S+)\s?/gi;
   const objectbbMatches = q.matchAll(objectbbRegex);
   const objectbbs = [];
   for (const match of objectbbMatches) {
@@ -144,7 +144,7 @@ export function TemporalQueryContainer({
         }}
       />
       <textarea
-        className="bg-slate-100 text-slate-400 focus:bg-white focus:text-black focus:outline-none"
+        className="text-sm bg-slate-100 text-slate-400 focus:bg-white focus:text-black focus:outline-none"
         rows={2}
         value={q}
         onChange={handleOnChange}
@@ -156,7 +156,7 @@ export function TemporalQueryContainer({
         }}
       />
       <textarea
-        className="bg-slate-100 text-slate-400 focus:bg-white focus:text-black focus:outline-none"
+        className="text-sm bg-slate-100 text-slate-400 focus:bg-white focus:text-black focus:outline-none"
         rows={1}
         value={ocrs.join(",")}
         onKeyDown={(e) => {

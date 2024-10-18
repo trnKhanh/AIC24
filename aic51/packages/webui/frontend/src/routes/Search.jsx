@@ -21,6 +21,7 @@ import SpinIcon from "../assets/spin.svg";
 import {
   nlist,
   limitOptions,
+  ef_default,
   nprobeOption,
   temporal_k_default,
   ocr_weight_default,
@@ -37,6 +38,7 @@ export async function loader({ request }) {
   const _offset = searchParams.get("offset") || 0;
   const selected = searchParams.get("selected") || undefined;
   const limit = searchParams.get("limit") || limitOptions[0];
+  const ef = searchParams.get("ef") || ef_default;
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
   const model = searchParams.get("model") || undefined;
   const temporal_k = searchParams.get("temporal_k") || temporal_k_default;
@@ -51,6 +53,7 @@ export async function loader({ request }) {
     q,
     _offset,
     limit,
+    ef,
     nprobe,
     model,
     temporal_k,
@@ -81,7 +84,7 @@ export default function Search() {
   const [qState, setqState] = useState("");
 
   const { q = "", id = null } = query;
-  const { limit, nprobe, model } = params;
+  const { limit, ef, nprobe, model } = params;
 
   const { total, frames } = data;
   const empty = frames.length === 0;
@@ -224,8 +227,14 @@ export default function Search() {
 
   return (
     <div id="search-area" className="flex flex-col shrink">
-      <Form className="flex flex-col" onSubmit={handleOnChangeParams}>
-        <div className="py-2 px-5 self-stretch text-md justify-start items-center flex flex-row flex-wrap">
+      <Form className="flex flex-row" onSubmit={handleOnChangeParams}>
+        <input
+          className="self-center h-fit text-md px-4 py-1 border-2 border-gray-500 rounded-xl bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-700 text-xs"
+          type="submit"
+          value="Apply"
+        />
+        <div className="py-1 px-5 self-stretch text-xs justify-start items-center flex flex-row flex-wrap">
+          <Editable name="ef" defaultValue={ef_default} />
           <Dropdown name="nprobe" options={nprobeOption} />
           <Dropdown name="limit" options={limitOptions} />
           <Dropdown name="model" options={modelOptions} />
@@ -235,12 +244,6 @@ export default function Search() {
           <Editable name="object_weight" defaultValue={object_weight_default} />
           <Editable name="max_interval" defaultValue={max_interval_default} />
         </div>
-
-        <input
-          className="self-center h-fit text-md px-4 py-1 border-2 border-gray-500 rounded-xl bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-700 text-sm"
-          type="submit"
-          value="Apply"
-        />
       </Form>
 
       <Form id="search-form" onSubmit={handleOnSearch}>

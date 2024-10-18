@@ -5,6 +5,7 @@ import logging
 import hashlib
 
 from thefuzz import fuzz
+import torch
 
 from ..index import MilvusDatabase
 from ...config import GlobalConfig
@@ -23,7 +24,9 @@ class Searcher(object):
             model_name = model["name"].lower()
             if model_name == "clip":
                 pretrained_model = model["pretrained_model"]
-                self._models[model_name] = CLIP(pretrained_model)
+                model = CLIP(pretrained_model)
+
+                self._models[model_name] = model
 
         if len(self._models) == 0:
             self._logger.error(
@@ -40,9 +43,9 @@ class Searcher(object):
         return list(Yolo.classes_list().values())
 
     def _process_query(self, query):
-        video_match = re.search('video:((".+?")|\\S+)\\s?', query)
+        video_match = re.search("video:L\\d{2}_V\\d{3}", query, re.IGNORECASE)
         video_ids = (
-            video_match.group().replace("video:", "", 1).strip('" ').split(",")
+            video_match.group()[len("video:") :].strip('" ').split(",")
             if video_match is not None
             else []
         )
@@ -59,16 +62,14 @@ class Searcher(object):
             q = q.strip()
             ocr = []
             while True:
-                match = re.search('OCR:((".+?")|\\S+)\\s?', q)
+                match = re.search('OCR:((".+?")|\\S+)\\s?', q, re.IGNORECASE)
                 if match is None:
                     break
-                ocr.append(
-                    match.group().replace("OCR:", "", 1).strip('" ').lower()
-                )
+                ocr.append(match.group()[len("ocr:") :].strip('" ').lower())
                 q = q.replace(match.group(), "")
             objects = []
             while True:
-                match = re.search('object:((".+?")|\\S+)\\s?', q)
+                match = re.search('object:((".+?")|\\S+)\\s?', q, re.IGNORECASE)
                 if match is None:
                     break
                 object_str = (
@@ -110,7 +111,9 @@ class Searcher(object):
     def _process_objects(self, advance_query, result, object_weight):
         if "objects" not in advance_query:
             return result
-        class_ids = dict([(v.lower(), int(k)) for k, v in Yolo.classes_list().items()])
+        class_ids = dict(
+            [(v.lower(), int(k)) for k, v in Yolo.classes_list().items()]
+        )
         query_objects = advance_query["objects"]
         query_objects = [
             [x[0], class_ids[x[1]]] for x in query_objects if x[1] in class_ids
@@ -267,7 +270,9 @@ class Searcher(object):
 
         return best
 
-    def _simple_search(self, processed, filter, offset, limit, nprobe, model):
+    def _simple_search(
+        self, processed, filter, offset, limit, ef, nprobe, model
+    ):
         text_features = (
             self._models[model].get_text_features(processed["queries"]).tolist()
         )
@@ -278,6 +283,7 @@ class Searcher(object):
             filter,
             offset,
             limit,
+            ef,
             nprobe,
             model,
         )[0]
@@ -305,6 +311,7 @@ class Searcher(object):
         filter,
         offset,
         limit,
+        ef,
         nprobe,
         model,
         temporal_k,
@@ -315,6 +322,7 @@ class Searcher(object):
     ):
         params = {
             "filter": filter,
+            "ef": ef,
             "nprobe": nprobe,
             "model": model,
             "temporal_k": temporal_k,
@@ -344,6 +352,7 @@ class Searcher(object):
                 filter,
                 0,
                 temporal_k,
+                ef,
                 nprobe,
                 model,
             )
@@ -413,6 +422,7 @@ class Searcher(object):
         filter: str = "",
         offset: int = 0,
         limit: int = 50,
+        ef: int = 32,
         nprobe: int = 8,
         model: str = "clip",
         temporal_k: int = 10000,
@@ -422,27 +432,29 @@ class Searcher(object):
         max_interval: int = 250,
         selected: str | None = None,
     ):
+        start_time = time.time()
         processed = self._process_query(q)
         no_query = all([len(x) == 0 for x in processed["queries"]])
         no_advance = all([len(x) == 0 for x in processed["advance"]])
 
         if no_query and no_advance:
             self._logger.debug(f"Get videos: {q}")
-            return self._get_videos(
+            res = self._get_videos(
                 processed["video_ids"], offset, limit, selected
             )
         elif len(processed["queries"]) == 1 and no_advance:
             self._logger.debug(f"Simple search: {q}")
-            return self._simple_search(
-                processed, filter, offset, limit, nprobe, model
+            res = self._simple_search(
+                processed, filter, offset, limit, ef, nprobe, model
             )
         else:
             self._logger.debug(f"Complex search: {q}")
-            return self._complex_search(
+            res = self._complex_search(
                 processed,
                 filter,
                 offset,
                 limit,
+                ef,
                 nprobe,
                 model,
                 temporal_k,
@@ -451,12 +463,18 @@ class Searcher(object):
                 object_weight,
                 max_interval,
             )
+        end_time = time.time()
+        self._logger.debug(
+            f"Take {end_time - start_time:.4f} to extract and search"
+        )
+        return res
 
     def search_similar(
         self,
         id: str,
         offset: int = 0,
         limit: int = 50,
+        ef: int = 32,
         nprobe: int = 8,
         model: str = "clip",
     ):
@@ -467,7 +485,7 @@ class Searcher(object):
         image_features = [record[0][model]]
 
         results = self._database.search(
-            image_features, "", offset, limit, nprobe, model
+            image_features, "", offset, limit, ef, nprobe, model
         )[0]
         res = {
             "results": results,

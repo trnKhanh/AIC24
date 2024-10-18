@@ -1,7 +1,9 @@
 import { searchSimilar } from "../services/search.js";
+
 import {
   nlist,
   limitOptions,
+  ef_default,
   nprobeOption,
   temporal_k_default,
   ocr_weight_default,
@@ -18,6 +20,7 @@ export async function loader({ request }) {
   const _offset = searchParams.get("offset") || 0;
   const selected = searchParams.get("selected") || undefined;
   const limit = searchParams.get("limit") || limitOptions[0];
+  const ef = searchParams.get("ef") || ef_default;
   const nprobe = searchParams.get("nprobe") || nprobeOption[0];
   const model = searchParams.get("model") || undefined;
   const temporal_k = searchParams.get("temporal_k") || temporal_k_default;
@@ -32,6 +35,7 @@ export async function loader({ request }) {
     id,
     _offset,
     limit,
+    ef,
     nprobe,
     model,
     temporal_k,

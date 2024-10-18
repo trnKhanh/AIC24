@@ -43,7 +43,9 @@ class CLIP(FeatureExtractor):
         return image_features
 
     def get_text_features(self, texts):
-        tokenized_input = self._processor(text=texts, return_tensors="pt", padding=True)
+        tokenized_input = self._processor(
+            text=texts, return_tensors="pt", padding=True
+        ).to(self._model.device)
 
         text_features = self._model.get_text_features(**tokenized_input)
 

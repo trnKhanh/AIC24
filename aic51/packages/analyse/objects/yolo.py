@@ -14,6 +14,10 @@ class Yolo(ObjectDetector):
     def __init__(self, pretrained_model):
         self._model = YOLO(pretrained_model, verbose=False)
         self._device = "cpu"
+        self._visual_path = (
+            Path.cwd() / "visualize" / Path(pretrained_model).stem
+        )
+        self._visual_path.mkdir(exist_ok=True, parents=True)
 
     def get_image_features(self, image_paths, batch_size, callback):
         image_features = []
@@ -28,6 +32,11 @@ class Yolo(ObjectDetector):
                 augment=True,
             )
             for i, result in enumerate(results):
+                result.plot(
+                    save=True,
+                    filename=self._visual_path
+                    / Path(image_paths[i + b * batch_size]).name,
+                )
                 bboxes = []
                 boxes_xyxy = result.boxes.xyxyn.tolist()
                 cls = result.boxes.cls.tolist()

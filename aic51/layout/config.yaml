@@ -4,7 +4,7 @@ add:
 analyse:
   features: &analyse_features
     - name: "clip"
-      pretrained_model: "openai/clip-vit-base-patch16"
+      pretrained_model: "apple/DFN5B-CLIP-ViT-H-14-378"
       batch_size: 16
     - name: "ocr"
       batch_size: 8
@@ -22,7 +22,7 @@ milvus:
       is_primary: true
     - field_name: "clip"
       datatype: "FLOAT_VECTOR"
-      dim: 512
+      dim: 1024
     - field_name: "ocr"
       datatype: "JSON"
     - field_name: "yolo"
@@ -30,10 +30,10 @@ milvus:
   indices:
     - field_name: "clip"
       metric_type: "COSINE"
-      index_type: "IVF_FLAT"
+      index_type: "SCANN"
       index_name: "clip_index"
       params:
-        nlist: 128
+        nlist: 512
 
 webui:
   features: *analyse_features

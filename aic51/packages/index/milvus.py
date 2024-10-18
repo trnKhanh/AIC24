@@ -1,4 +1,5 @@
 import logging
+import time
 import re
 import hashlib
 import subprocess
@@ -93,6 +94,7 @@ class MilvusDatabase(object):
         filter="",
         offset=0,
         limit=50,
+        ef=32,
         nprobe=8,
         feature="clip",
     ):
@@ -101,8 +103,12 @@ class MilvusDatabase(object):
             "metric_type": "COSINE",
             "params": {
                 "nprobe": nprobe,
+                # "ef": ef,
             },
         }
+        self._logger.debug(f"Search_params: {search_params}")
+        start_time = time.time()
+
         res = self._client.search(
             self._collection_name,
             data=query,
@@ -112,6 +118,10 @@ class MilvusDatabase(object):
             limit=limit,
             search_params=search_params,
             output_fields=["*"],
+        )
+        finish_time = time.time()
+        self._logger.debug(
+            f"Takes {finish_time-start_time:.4f} seconds to search"
         )
         return res
 

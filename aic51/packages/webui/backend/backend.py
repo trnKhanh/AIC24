@@ -209,6 +209,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         q: str = "",
         offset: int = 0,
         limit: int = 50,
+        ef: int = 32,
         nprobe: int = 8,
         temporal_k: int = 10000,
         ocr_weight: float = 1.0,
@@ -223,6 +224,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
                 "",
                 offset,
                 limit,
+                ef,
                 nprobe,
                 model,
                 temporal_k,
@@ -272,6 +274,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         params = {
             "model": model,
             "limit": limit,
+            "ef": ef,
             "nprobe": nprobe,
             "temporal_k": temporal_k,
             "ocr_weight": ocr_weight,
@@ -293,6 +296,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         model: str = "clip",
         offset: int = 0,
         limit: int = 50,
+        ef: int = 32,
         nprobe: int = 8,
         temporal_k: int = 10000,
         ocr_weight: float = 1.0,
@@ -300,7 +304,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         object_weight: float = 1.0,
         max_interval: int = 250,
     ):
-        res = searcher.search_similar(id, offset, limit, nprobe, model)
+        res = searcher.search_similar(id, offset, limit, ef, nprobe, model)
         frames = []
         for record in res["results"]:
             data = record["entity"]
@@ -328,6 +332,7 @@ def setup_search(app: FastAPI, work_dir, searcher: Searcher):
         params = {
             "model": model,
             "limit": limit,
+            "ef": ef,
             "nprobe": nprobe,
             "temporal_k": temporal_k,
             "ocr_weight": ocr_weight,
