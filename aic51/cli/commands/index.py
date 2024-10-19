@@ -94,7 +94,7 @@ class IndexCommand(BaseCommand):
 
             futures = []
             video_paths = sorted(
-                [d for d in keyframes_dir.glob("*/") if d.is_dir()],
+                [d for d in features_dir.glob("*/") if d.is_dir()],
                 key=lambda path: path.stem,
             )
             for video_path in video_paths:
