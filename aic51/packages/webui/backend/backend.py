@@ -499,11 +499,10 @@ def setup_video_proxy(app: FastAPI, request_timeout, gsize=10):
             )
 
 
-def setup_video(app, work_dir, searcher):
+def setup_video(app, work_dir):
     @app.get("/api/_frame_info")
     async def frame_info(request: Request, video_id: str, frame_id: str):
         id = f"{video_id}#{frame_id}"
-        record = searcher.get(id)
         frame_uri = (
             f"{request.base_url}api/files/keyframes/{video_id}/{frame_id}.jpg"
         )
@@ -514,10 +513,10 @@ def setup_video(app, work_dir, searcher):
         except:
             fps = 25
         return dict(
-            id=id if len(record) > 0 else None,
+            id=id,
             video_id=video_id,
             frame_id=frame_id,
-            frame_uri=frame_uri if len(record) > 0 else None,
+            frame_uri=frame_uri,
             video_uri=video_uri,
             fps=fps,
         )

@@ -16,22 +16,23 @@ from ...packages.analyse.objects import Yolo
 class Searcher(object):
     cache = {}
 
-    def __init__(self, collection_name):
+    def __init__(self, collection_name, need_models=False):
         self._logger = logging.getLogger("searcher")
         self._database = MilvusDatabase(collection_name)
         self._models = {}
-        for model in GlobalConfig.get("webui", "features") or []:
-            model_name = model["name"].lower()
-            if model_name == "clip":
-                pretrained_model = model["pretrained_model"]
-                model = CLIP(pretrained_model)
+        if need_models:
+            for model in GlobalConfig.get("webui", "features") or []:
+                model_name = model["name"].lower()
+                if model_name == "clip":
+                    pretrained_model = model["pretrained_model"]
+                    model = CLIP(pretrained_model)
 
-                self._models[model_name] = model
+                    self._models[model_name] = model
 
-        if len(self._models) == 0:
-            self._logger.error(
-                f'No models found in "{GlobalConfig.CONFIG_FILE}". Check your "{GlobalConfig.CONFIG_FILE}"'
-            )
+            if len(self._models) == 0:
+                self._logger.error(
+                    f'No models found in "{GlobalConfig.CONFIG_FILE}". Check your "{GlobalConfig.CONFIG_FILE}"'
+                )
 
     def get(self, id):
         return self._database.get(id)

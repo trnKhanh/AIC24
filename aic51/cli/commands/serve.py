@@ -126,7 +126,6 @@ class ServeCommand(BaseCommand):
 
         def run_logic_backend():
             workers = GlobalConfig.get("webui", "workers") or 1
-            self._logger.debug(workers)
             uvicorn.run(
                 f"aic51.packages.webui.backend.logic:app",
                 host="0.0.0.0",
