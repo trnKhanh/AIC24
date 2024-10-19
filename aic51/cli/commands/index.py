@@ -103,6 +103,10 @@ class IndexCommand(BaseCommand):
             for future in futures:
                 future.result()
 
+    def _normalize_vector(self, feature):
+        norm = np.power(np.sum(np.power(feature, 2)), 0.5)
+        return feature / norm
+
     def _index_features(self, database, video_id, do_update, update_progress):
         update_progress(description="Indexing...")
         features_dir = self._work_dir / "features" / video_id
@@ -126,6 +130,8 @@ class IndexCommand(BaseCommand):
                     continue
                 if feature_path.suffix == ".npy":
                     feature = np.load(feature_path)
+                    feature = self._normalize_vector(feature)
+                    assert np.sum(np.power(feature, 2)) <= 1 + 1e-3
                 elif feature_path.suffix == ".txt":
                     with open(feature_path, "r") as f:
                         feature = f.read()

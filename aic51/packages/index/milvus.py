@@ -100,7 +100,7 @@ class MilvusDatabase(object):
     ):
         limit = min(limit, self.SEARCH_LIMIT)
         search_params = {
-            "metric_type": "COSINE",
+            "metric_type": "IP",
             "params": {
                 "nprobe": nprobe,
                 # "ef": ef,

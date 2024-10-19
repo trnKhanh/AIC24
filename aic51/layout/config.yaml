@@ -29,7 +29,7 @@ milvus:
       datatype: "JSON"
   indices:
     - field_name: "clip"
-      metric_type: "COSINE"
+      metric_type: "IP"
       index_type: "SCANN"
       index_name: "clip_index"
       params:
