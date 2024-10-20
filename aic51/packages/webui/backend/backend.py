@@ -511,7 +511,7 @@ def setup_video(app, work_dir):
             with open(work_dir / "videos_info" / f"{video_id}.json", "r") as f:
                 fps = json.load(f)["frame_rate"]
         except:
-            fps = 25
+            return Response(status_code=404)
         return dict(
             id=id,
             video_id=video_id,

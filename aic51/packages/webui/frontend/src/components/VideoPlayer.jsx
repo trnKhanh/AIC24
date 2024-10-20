@@ -1,13 +1,13 @@
 import { useFetcher } from "react-router-dom";
 import { createContext, useEffect, useContext, useState, useRef } from "react";
 import { AuthContext } from "./AuthProvider";
-import {getFrameInfo} from "../services/search.js"
+import { getFrameInfo } from "../services/search.js";
 export const VideoContext = createContext({ playVideo: null });
 
 export default function VideoProvider({ children }) {
   const [frameInfo, setFrameInfo] = useState(null);
   const playVideo = async (f) => {
-    const res = await getFrameInfo(f.video_id, f.frame_id)
+    const res = await getFrameInfo(f.video_id, f.frame_id);
     setFrameInfo(res);
   };
   const handleOnCancle = () => {
