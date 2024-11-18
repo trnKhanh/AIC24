@@ -13,7 +13,7 @@
 - Run the following command to install `aic51-cli` CLI:
 
 ```bash
-pip install git+https://github.com/trnKhanh/AIC24.git
+pip install git+https://github.com/trnKhanh/AIC24.git@v1
 ```
 
 ## Plan
